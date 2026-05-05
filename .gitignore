@@ -1,7 +1,10 @@
 # Old HTML versions — keep only current
 ea_dressage_v[0-9]*.html
-!ea_dressage_v13.html
+!ea_dressage_v14.html
 index.html.html
+
+# Browser-saved resource folders
+ea_dressage_v*_files/
 
 # Binary / document files
 *.docx
