@@ -117,7 +117,7 @@ Standalone module: `prompt-generator.js`. Pure function: `(testDef, segs) → pr
 5. **Distance** *(not yet built)* — auto-calc `dist` from geometry + gait speed.
 
 ### Post-test phase (locked in)
-All three EA tests end officially at the halt and salute at X. Post-halt segments (walk to C, boundary exit CW/CCW) are best-practice visualisation — useful for beginner coaching but not EA-prescribed. The exit direction (CW or CCW turn at C) is the rider's choice; it is not specified by any of the three tests. Events for post-halt segments are tagged `phase: 'post-test'`. All other events are `phase: 'test'`. Layer 4 filters or renders `post-test` events differently by difficulty level.
+All three EA tests end officially at the halt and salute at X. Post-halt segments (walk to C, boundary exit CW/CCW) are best-practice visualisation — useful for beginner coaching but not EA-prescribed. The exit direction (CW or CCW turn at C) is the rider's choice; it is not specified by any of the three tests. Events for post-halt segments are tagged `phase: 'post-test'`. All other events are `phase: 'test'`. Layer 4 filters or renders `post-test` events differently by difficulty level. Post-test rein-change events fire only when the exit direction differs from the carried rein — e.g. 1.2 Mv 16 (Exit CW after right-rein boundary) emits no post-test event; 1.3 Mv 13 (Exit CCW after right-rein boundary) emits one.
 
 ### Layer 2 status: VALIDATED against all 3 tests
 
@@ -175,7 +175,7 @@ Coeff×2: 1.2→Mv3,4,8,9,12,13 · 1.3→Mv2,6,7,8,12 · EVB→none
 ## Known Issues / Next Priorities
 
 1. **Soft-loop atMarker labels** — currently "first quarterline" / "second quarterline" as text. SIR/VLP marker names available but not yet wired in (these are 12m letters on the 60m arena long sides, only present in 60m). Need to handle 40m arena (no quarterline letters).
-2. **Layer 3 — events** — BUILT. `generateEvents(testMoves, reinTrace, testDefs)`. Event types: `rein-change`, `gait-transition`, `circle-entry`, `halt`, `mv-preview`, `coeff-banner`. All tagged `phase:'test'` or `phase:'post-test'`. Needs validation via `validate-events.js`.
+2. **Layer 3 — events** — BUILT + VALIDATED (all 3 tests). `generateEvents(testMoves, reinTrace, testDefs)`. Event types: `rein-change`, `gait-transition`, `circle-entry`, `halt`, `mv-preview`, `coeff-banner`. All tagged `phase:'test'` or `phase:'post-test'`.
 3. **Layer 4 — templates** — turn events into text. Architecture rules from session 7 (WHERE→WHAT→HOW→WHERE-TO). Drop "boundary"/"left lead" defaults.
 4. **Layer 5 — auto-distance** — calc `dist` from segment length, gait speed, and event role (preview/transition/arrival). Default ≈ 2.5s lead time at gait pace, clamped to [4, 12]m.
 5. **Difficulty levels** — emit all prompts tagged with `minLevel`; display layer filters. L1 beginner = every meaningful waypoint. L2 intermediate (current target) = coach-style. L3 advanced = one preview per movement.
