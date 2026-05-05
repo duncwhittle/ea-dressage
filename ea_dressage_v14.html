@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/duncw/Downloads/ea_dressage_v14.html -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EA Dressage — Preliminary 1.2</title>
-<link href="./ea_dressage_v14_files/css2" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f2ede6;--surface:#faf8f4;--surface2:#f0ece4;--border:#ddd8ce;
@@ -144,68 +144,162 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px;}
 .float-handle-dots{font-size:11px;color:var(--text3);letter-spacing:2px;}
 .float-handle-label{font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--text3);text-transform:uppercase;}
 
-@media(max-width:700px),(orientation:portrait){
-  body{height:auto;overflow:auto;}
-  .main{flex-direction:column;}
-  .side{width:100%;border-left:none;border-top:1px solid var(--border);}
+/* Hide mobile-only elements on desktop */
+.mob-header-tests,.mob-fs-btn,.mobile-overlay,.mobile-controls{display:none;}
+
+@media(max-width:680px),(orientation:portrait){
+  /* Show mobile elements */
+  .mob-header-tests{display:flex!important;}
+  .mob-fs-btn{display:block!important;}
+  .mobile-overlay{display:flex!important;flex-direction:column;}
+  .mobile-controls{display:flex!important;}
+
+  body{
+    height:100dvh;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    background:#1a3a5c;
+  }
+
+  /* Mobile header */
+  .header{padding:6px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .htitle{font-size:12px;white-space:nowrap;}
+  .hsub{display:none;}
   .hc{display:none;}
+
+  /* Test buttons in header on mobile */
+  .mob-header-tests{display:flex;gap:4px;}
+  .mob-header-tests button{
+    padding:3px 8px;font-size:10px;font-family:'DM Sans',sans-serif;
+    border-radius:12px;border:1px solid rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);
+    cursor:pointer;font-weight:500;
+  }
+  .mob-header-tests button.active{background:var(--gold);border-color:var(--gold);color:#1c1a17;}
+  .mob-fs-btn{
+    background:none;border:1px solid rgba(255,255,255,0.3);
+    border-radius:8px;color:#fff;padding:3px 7px;
+    font-size:13px;cursor:pointer;flex-shrink:0;
+  }
+  .mob-fs-btn.active{background:rgba(201,168,76,0.4);}
+
+  /* Arena area */
+  .main{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#1a3a5c;position:relative;}
+  .side{display:none;}
+  .awrap{display:flex;align-items:center;justify-content:center;flex:1;min-height:0;width:100%;position:relative;}
+  #cv{display:block;border-radius:0;box-shadow:none;max-width:100%;}
   .bubble{display:none;}
   .float-ctrl{display:none;}
+
+  /* Movement overlay — below canvas */
+  .mobile-overlay{
+    width:100%;flex-shrink:0;background:var(--navy);
+    padding:5px 12px;z-index:20;
+    border-top:1px solid rgba(255,255,255,0.12);
+  }
+  .mob-top{display:flex;align-items:center;gap:8px;}
+  .mob-num{
+    width:18px;height:18px;border-radius:50%;
+    background:rgba(255,255,255,0.15);color:#fff;
+    font-size:9px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .mob-label{font-size:11px;font-weight:500;color:#fff;flex:1;line-height:1.3;}
+  .mob-expand{background:none;border:none;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;padding:0 2px;flex-shrink:0;}
+  .mob-pills{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;}
+  .mob-details{
+    display:none;margin-top:4px;
+    font-size:10px;color:rgba(255,255,255,0.75);line-height:1.5;
+    border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;
+  }
+  .mob-details.show{display:block;}
+
+  /* Controls bar */
+  .mobile-controls{
+    width:100%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    gap:8px;padding:6px 10px;
+    padding-bottom:calc(6px + env(safe-area-inset-bottom));
+    background:var(--navy);
+    border-top:1px solid rgba(255,255,255,0.12);
+  }
+  .mob-btn{
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.1);
+    color:#fff;font-size:13px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .mob-btn.play{background:rgba(201,168,76,0.92);border-color:var(--gold);color:#1c1a17;width:46px;height:46px;font-size:17px;}
+  .mob-btn.loop-on{background:rgba(76,175,80,0.7);border-color:#4caf50;}
+
+  /* Speed slider */
+  .mob-speed{display:flex;align-items:center;gap:4px;flex:1;max-width:100px;}
+  .mob-speed-lbl{font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;}
+  .mob-speed input[type=range]{width:100%;accent-color:var(--gold);}
+  .mob-speed-val{font-size:9px;color:rgba(255,255,255,0.8);min-width:20px;text-align:right;}
 }
 </style>
 </head>
 <body>
 <div class="header">
-  <div><div class="htitle" id="htitle">Eventing Test B 45/60cm · 40×20m · Equestrian Australia</div>
-  <div class="hsub" id="hsub">40×20m arena · Equestrian Australia</div></div>
+  <div><div class="htitle" id="htitle">Preliminary 1.2 · Equestrian Australia</div>
+  <div class="hsub" id="hsub">60×20m arena · Equestrian Australia</div></div>
+  <div class="mob-header-tests" id="mob-header-tests">
+    <button id="mob-ht12" onclick="switchTest('1.2')" class="active">1.2</button>
+    <button id="mob-ht13" onclick="switchTest('1.3')">1.3</button>
+    <button id="mob-htevb" onclick="switchTest('evb')">Ev B</button>
+  </div>
+  <button class="mob-fs-btn" id="mob-fs" onclick="toggleFullscreen()">⛶</button>
   <div class="hc">
     <span class="hlbl">Test</span>
-    <button class="hbtn" id="t12" onclick="switchTest(&#39;1.2&#39;)">Prelim 1.2</button>
-    <button class="hbtn" id="t13" onclick="switchTest(&#39;1.3&#39;)">Prelim 1.3</button>
-    <button class="hbtn active" id="tevb" onclick="switchTest(&#39;evb&#39;)">Ev Test B</button>
+    <button class="hbtn active" id="t12" onclick="switchTest('1.2')">Prelim 1.2</button>
+    <button class="hbtn" id="t13" onclick="switchTest('1.3')">Prelim 1.3</button>
+    <button class="hbtn" id="tevb" onclick="switchTest('evb')">Ev Test B</button>
     <div class="hsep"></div>
     <span class="hlbl">Arena</span>
-    <button class="hbtn" id="a60" onclick="setArena(60)">60m</button>
-    <button class="hbtn active" id="a40" onclick="setArena(40)">40m</button>
+    <button class="hbtn active" id="a60" onclick="setArena(60)">60m</button>
+    <button class="hbtn" id="a40" onclick="setArena(40)">40m</button>
     <div class="hsep"></div>
     <span class="hlbl">Mode</span>
-    <button class="hbtn active" id="m-uniform" onclick="setMode(&#39;uniform&#39;)">Uniform</button>
-    <button class="hbtn" id="m-relative" onclick="setMode(&#39;relative&#39;)">Relative</button>
-    <button class="hbtn" id="m-timed" onclick="setMode(&#39;timed&#39;)">Timed 4:00</button>
+    <button class="hbtn active" id="m-uniform" onclick="setMode('uniform')">Uniform</button>
+    <button class="hbtn" id="m-relative" onclick="setMode('relative')">Relative</button>
+    <button class="hbtn" id="m-timed" onclick="setMode('timed')">Timed 5:30</button>
     <div class="hsep"></div>
     <span class="hlbl">Speed</span>
-    <button class="hsnap active" id="snap2" onclick="snapSpeed(200)">2×</button>
+    <button class="hsnap" id="snap2" onclick="snapSpeed(200)">2×</button>
     <button class="hsnap" id="snap8" onclick="snapSpeed(800)">8×</button>
     <div class="hsep"></div>
     <button class="hbtn" id="exit-toggle" onclick="toggleExit()">Exit: On</button>
   </div>
 </div>
 <!-- FLOATING BUBBLE -->
-<div class="float-box bubble" id="bubble" style="width: 230px; padding: 0px; left: 793.413px; top: 66.1px;">
+<div class="float-box bubble" id="bubble" style="width:230px;padding:0;">
   <div class="float-handle" id="bubble-handle">
     <span class="float-handle-label">Live</span>
     <span class="float-handle-dots">⠿</span>
   </div>
   <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px;">
     <div class="bubble-mv">
-      <div class="bubble-badge" id="b-dn">1</div>
+      <div class="bubble-badge" id="b-dn">·</div>
       <div style="flex:1;">
-        <div class="bubble-label" id="b-dl">A → C · working trot</div>
-        <div class="bubble-coeff" id="b-dc" style="display: none;">×2 coefficient</div>
+        <div class="bubble-label" id="b-dl">—</div>
+        <div class="bubble-coeff" id="b-dc" style="display:none"></div>
       </div>
     </div>
-    <div class="bubble-coeff-banner" id="b-coeff-warn" style="">⭐ Next: ×2 coefficient movement</div>
+    <div class="bubble-coeff-banner" id="b-coeff-warn"></div>
     <div class="bubble-prompt-wrap">
-      <div class="bubble-prompt-empty" id="b-empty" style="display: none;">No active prompt</div>
-      <div class="bubble-prompt show" id="b-dp" style="">Track left at C — boundary to E</div>
+      <div class="bubble-prompt-empty" id="b-empty">No active prompt</div>
+      <div class="bubble-prompt" id="b-dp"></div>
     </div>
-    <div class="bubble-gaits" id="b-dg"><span class="pill trot">Working trot</span></div>
-    <div class="bubble-dir" id="b-ddir" style="">Straightness on centreline, regularity and quality of trot.</div>
+    <div class="bubble-gaits" id="b-dg"></div>
+    <div class="bubble-dir" id="b-ddir" style="display:none"></div>
   </div>
 </div>
 
 <!-- FLOATING CONTROLS -->
-<div class="float-box float-ctrl" id="float-ctrl" style="width: 240px; padding: 0px; left: 793.413px; top: 510px;">
+<div class="float-box float-ctrl" id="float-ctrl" style="width:240px;padding:0;">
   <div class="float-handle" id="ctrl-handle">
     <span class="float-handle-label">Controls</span>
     <span class="float-handle-dots">⠿</span>
@@ -215,7 +309,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px;}
       <button class="cb" onclick="resetToStart()">Reset</button>
       <button class="cb" onclick="rewindToStartOfMove()">Mv ‹‹</button>
       <button class="cb" onclick="userPrev()">Tr ‹</button>
-      <button class="cb" id="pb" onclick="togglePlay()">&gt; Play</button>
+      <button class="cb" id="pb" onclick="togglePlay()">Play</button>
       <button class="cb" onclick="skipToEndOfSeg()">Tr ›</button>
       <button class="cb" onclick="skipToEndOfMove()">Mv ››</button>
     </div>
@@ -224,18 +318,18 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px;}
     </div>
     <div class="progwrap">
       <div class="progbg" id="progbg" style="cursor:pointer;" title="Click or drag to scrub">
-        <div class="progfill" id="pf" style="width: 81.3665%;"></div>
+        <div class="progfill" id="pf" style="width:0%"></div>
       </div>
-      <span class="progtxt" id="pt">1 / 14</span>
+      <span class="progtxt" id="pt">· / 16</span>
       <span class="progtxt" id="substep" style="margin-left:4px;color:var(--gold);"></span>
     </div>
     <div class="speed-row">
       <span style="font-size:10px;color:var(--text3);">Speed</span>
-      <button class="speed-snap active" id="psnap2" onclick="snapSpeed(200)">2×</button>
+      <button class="speed-snap" id="psnap2" onclick="snapSpeed(200)">2×</button>
       <button class="speed-snap" id="psnap8" onclick="snapSpeed(800)">8×</button>
       <div class="speed-slider-wrap">
         <input type="range" id="spslider" min="20" max="1000" value="800" step="5" oninput="setSpeed(+this.value)">
-        <span class="speed-val" id="spval">2×</span>
+        <span class="speed-val" id="spval">8×</span>
       </div>
     </div>
     <div class="legend">
@@ -251,30 +345,51 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px;}
 
 <div class="main">
   <div class="awrap" style="position:relative;">
-    <canvas id="cv" width="431" height="867" style="width: 344.833px; height: 694px;"></canvas>
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="mobile-overlay" id="mob-overlay">
+    <div class="mob-top">
+      <div class="mob-num" id="mob-num">·</div>
+      <div class="mob-label" id="mob-label">—</div>
+      <button class="mob-expand" id="mob-expand" onclick="toggleMobExpand()">▾</button>
+    </div>
+    <div class="mob-pills" id="mob-pills"></div>
+    <div class="mob-details" id="mob-details"></div>
+  </div>
+  <div class="mobile-controls" id="mob-controls">
+    <button class="mob-btn" onclick="userPrev()">←</button>
+    <button class="mob-btn play" id="mob-pb" onclick="togglePlay()">▶</button>
+    <button class="mob-btn" onclick="userNext()">→</button>
+    <button class="mob-btn" id="mob-lb" onclick="toggleLoop()">↺</button>
+    <div class="mob-speed">
+      <span class="mob-speed-lbl">Speed</span>
+      <input type="range" min="20" max="1000" value="800" step="5"
+        oninput="setSpeed(+this.value);document.getElementById('mob-spval').textContent=speedMult.toFixed(speedMult<1?1:0)+'×'">
+      <span class="mob-speed-val" id="mob-spval">8×</span>
+    </div>
   </div>
   <div class="side">
     <!-- Movement info (kept for reference, secondary to bubble) -->
     <div class="mcard">
       <div class="ch">
-        <div class="cbadge" id="dn">1</div>
-        <div class="clbl" id="dl">A → C · working trot</div>
-        <div class="ccoeff" id="dc" style="display: none;">×2 coefficient</div>
+        <div class="cbadge" id="dn">·</div>
+        <div class="clbl" id="dl">—</div>
+        <div class="ccoeff" id="dc" style="display:none"></div>
       </div>
       <div class="craw">
         <div class="craw-label">Test sheet</div>
         <div id="draw">—</div>
       </div>
-      <div class="cprompt-coeff-banner" id="coeff-warn" style="">⭐ Next: ×2 coefficient movement</div>
+      <div class="cprompt-coeff-banner" id="coeff-warn"></div>
       <div class="cprompt-wrap">
         <div class="cprompt-empty">No active prompt</div>
-        <div class="cprompt show" id="dp" style="">Track left at C — boundary to E</div>
+        <div class="cprompt" id="dp"></div>
       </div>
-      <div class="cdir" id="ddir" style="">📋 Straightness on centreline, regularity and quality of trot.</div>
-      <div class="cpills" id="dg"><span class="pill trot">Working trot</span></div>
+      <div class="cdir" id="ddir" style="display:none"></div>
+      <div class="cpills" id="dg"></div>
     </div>
     <!-- Movement list — full remaining height -->
-    <div class="mlist" id="ml"><button class="mb"><span class="mn">·</span><span style="flex:1;line-height:1.4;">Approach</span><span class="mbr"></span></button><button class="mb active"><span class="mn">1</span><span style="flex:1;line-height:1.4;">A → C · working trot</span><span class="mbr"></span></button><button class="mb"><span class="mn">2</span><span style="flex:1;line-height:1.4;">C → H → E · circle left 20m · E → K → A</span><span class="mbr"></span></button><button class="mb"><span class="mn">3</span><span style="flex:1;line-height:1.4;">A · circle left (trot→canter) · A→F→B</span><span class="mbr"></span></button><button class="mb"><span class="mn">4</span><span style="flex:1;line-height:1.4;">B → E · half circle left</span><span class="mbr"></span></button><button class="mb"><span class="mn">5</span><span style="flex:1;line-height:1.4;">Between E &amp; K · working trot</span><span class="mbr"></span></button><button class="mb"><span class="mn">6</span><span style="flex:1;line-height:1.4;">K → A · working trot → walk at A</span><span class="mbr"></span></button><button class="mb"><span class="mn">7</span><span style="flex:1;line-height:1.4;">A → F · medium walk</span><span class="mbr"></span></button><button class="mb"><span class="mn">8</span><span style="flex:1;line-height:1.4;">F → X→H · free walk · H→C · medium walk</span><span class="mbr"></span></button><button class="mb"><span class="mn">9</span><span style="flex:1;line-height:1.4;">C → M → B · working trot</span><span class="mbr"></span></button><button class="mb"><span class="mn">10</span><span style="flex:1;line-height:1.4;">B · circle right 20m · B→F→A</span><span class="mbr"></span></button><button class="mb"><span class="mn">11</span><span style="flex:1;line-height:1.4;">A · circle right (trot→canter) · A→K→E</span><span class="mbr"></span></button><button class="mb"><span class="mn">12</span><span style="flex:1;line-height:1.4;">E → B · half circle right</span><span class="mbr"></span></button><button class="mb"><span class="mn">13</span><span style="flex:1;line-height:1.4;">Between B &amp; F · working trot · F→A</span><span class="mbr"></span></button><button class="mb"><span class="mn">14</span><span style="flex:1;line-height:1.4;">A → X · Halt, salute · Exit CW</span><span class="mbr"></span></button></div>
+    <div class="mlist" id="ml"></div>
   </div>
 </div>
 
@@ -2092,7 +2207,10 @@ function startAnim(idx,play){
   animFrame=requestAnimationFrame(tick);
 }
 
-function syncPlayBtn(){document.getElementById('pb').textContent=isPlaying?'|| Pause':'> Play';}
+function syncPlayBtn(){
+  document.getElementById('pb').textContent=isPlaying?'|| Pause':'> Play';
+  const mp=document.getElementById('mob-pb');if(mp)mp.textContent=isPlaying?'⏸':'▶';
+}
 
 function togglePlay(){
   if(isPlaying){
@@ -2116,7 +2234,60 @@ function toggleLoop(){
   const b=document.getElementById('lb');
   b.textContent='↺ Loop: '+(looping?'On':'Off');
   b.classList.toggle('active',looping);
+  const ml=document.getElementById('mob-lb');
+  if(ml)ml.classList.toggle('loop-on',looping);
 }
+
+// ─── MOBILE UI ────────────────────────────────────────
+function isMobile(){
+  return window.innerWidth<=680||window.screen.orientation?.type?.includes('portrait')||
+    (window.innerHeight>window.innerWidth&&window.innerWidth<768);
+}
+
+let mobExpanded=false;
+function toggleMobExpand(){
+  mobExpanded=!mobExpanded;
+  document.getElementById('mob-details').classList.toggle('show',mobExpanded);
+  document.getElementById('mob-expand').textContent=mobExpanded?'▴':'▾';
+}
+
+function updateMobileUI(i){
+  if(!isMobile()) return;
+  const mv=MOVES[i];
+  document.getElementById('mob-num').textContent=mv.n||'·';
+  document.getElementById('mob-label').textContent=mv.label;
+  const gaits=[];
+  mv.segs.forEach(s=>{
+    if(s.t==='grad'){if(!gaits.includes(s.g1))gaits.push(s.g1);if(!gaits.includes(s.g2))gaits.push(s.g2);}
+    else if(s.g&&s.g!=='none'&&!gaits.includes(s.g))gaits.push(s.g);
+    else if(s.t==='halt'&&!gaits.includes('halt'))gaits.push('halt');
+  });
+  document.getElementById('mob-pills').innerHTML=
+    gaits.map(g=>`<span class="pill ${GS[g]||g}" style="font-size:10px;padding:2px 7px;">${GL[g]||g}</span>`).join('');
+  const det=document.getElementById('mob-details');
+  det.textContent=mv.dir?'📋 '+mv.dir:'';
+  ['12','13','evb'].forEach(t=>{
+    document.getElementById('mob-ht'+t)?.classList.toggle('active',t===activeTest.replace('.',''));
+  });
+}
+
+function toggleFullscreen(){
+  const el=document.documentElement;
+  const isFS=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  if(isFS){
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  } else {
+    (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);
+  }
+}
+document.addEventListener('fullscreenchange',()=>{
+  const btn=document.getElementById('mob-fs');
+  if(btn) btn.classList.toggle('active',!!document.fullscreenElement);
+});
+document.addEventListener('webkitfullscreenchange',()=>{
+  const btn=document.getElementById('mob-fs');
+  if(btn) btn.classList.toggle('active',!!document.webkitFullscreenElement);
+});
 
 function userNext(){
   isPlaying=false;syncPlayBtn();
@@ -2235,6 +2406,7 @@ function updateDetail(i){
   const bdir=document.getElementById('b-ddir');
   if(mv.dir){bdir.textContent=mv.dir;bdir.style.display='';}
   else bdir.style.display='none';
+  updateMobileUI(i);
 }
 
 function buildList(){
@@ -2292,6 +2464,5 @@ window.addEventListener('resize',()=>{
 
 init();
 </script>
-
-
-</body></html>
+</body>
+</html>
