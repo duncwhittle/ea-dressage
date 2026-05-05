@@ -112,9 +112,12 @@ Standalone module: `prompt-generator.js`. Pure function: `(testDef, segs) → pr
 ### Layered architecture
 1. **Geometry** — `segDirection(seg) → {rein, flips, crossing}`. Per-segment intrinsic rein. Pure math.
 2. **State** — `walkRein(testMoves) → trace[]`. Walks the test, carries rein, emits events: `rein-establish`, `rein-change` (softness: `hard|crossing|soft`).
-3. **Events** *(not yet built)* — emit movement events: `mv-preview`, `transition`, `marker-arrival`, `coeff-banner`.
+3. **Events** — `generateEvents(testMoves, reinTrace, testDefs) → events[]`. Movement-level coaching events. Structured data only — no text. Layers 4-5 consume events; Layer 3 does not produce text.
 4. **Templates** *(not yet built)* — events × level → prompt text.
 5. **Distance** *(not yet built)* — auto-calc `dist` from geometry + gait speed.
+
+### Post-test phase (locked in)
+All three EA tests end officially at the halt and salute at X. Post-halt segments (walk to C, boundary exit CW/CCW) are best-practice visualisation — useful for beginner coaching but not EA-prescribed. The exit direction (CW or CCW turn at C) is the rider's choice; it is not specified by any of the three tests. Events for post-halt segments are tagged `phase: 'post-test'`. All other events are `phase: 'test'`. Layer 4 filters or renders `post-test` events differently by difficulty level.
 
 ### Layer 2 status: VALIDATED against all 3 tests
 
@@ -146,12 +149,14 @@ For each segment, in order:
 ### Test harness: `validate-rein.js` and `diff-vs-brief.js`
 Run via `node validate-rein.js {1.2|1.3|EVB|all}` for full per-segment trace.
 Run `node diff-vs-brief.js` for detector-vs-brief comparison summary.
+Run `node validate-events.js {1.2|1.3|EVB|all}` for Layer 3 event stream per test.
 
 ### Files
 - `prompt-generator.js` — the generator module
 - `translator-shim.js` — Node-runnable extract of translator (DOM-stripped)
-- `validate-rein.js` — full trace harness
-- `diff-vs-brief.js` — comparison summary
+- `validate-rein.js` — full trace harness (Layer 2)
+- `diff-vs-brief.js` — comparison summary (Layer 2)
+- `validate-events.js` — event stream harness (Layer 3)
 
 ---
 
@@ -170,7 +175,7 @@ Coeff×2: 1.2→Mv3,4,8,9,12,13 · 1.3→Mv2,6,7,8,12 · EVB→none
 ## Known Issues / Next Priorities
 
 1. **Soft-loop atMarker labels** — currently "first quarterline" / "second quarterline" as text. SIR/VLP marker names available but not yet wired in (these are 12m letters on the 60m arena long sides, only present in 60m). Need to handle 40m arena (no quarterline letters).
-2. **Layer 3 — events** — emit movement-level events (mv-preview, transition, marker-arrival, coeff-banner). Should consume both rein-trace and test definition.
+2. **Layer 3 — events** — BUILT. `generateEvents(testMoves, reinTrace, testDefs)`. Event types: `rein-change`, `gait-transition`, `circle-entry`, `halt`, `mv-preview`, `coeff-banner`. All tagged `phase:'test'` or `phase:'post-test'`. Needs validation via `validate-events.js`.
 3. **Layer 4 — templates** — turn events into text. Architecture rules from session 7 (WHERE→WHAT→HOW→WHERE-TO). Drop "boundary"/"left lead" defaults.
 4. **Layer 5 — auto-distance** — calc `dist` from segment length, gait speed, and event role (preview/transition/arrival). Default ≈ 2.5s lead time at gait pace, clamped to [4, 12]m.
 5. **Difficulty levels** — emit all prompts tagged with `minLevel`; display layer filters. L1 beginner = every meaningful waypoint. L2 intermediate (current target) = coach-style. L3 advanced = one preview per movement.

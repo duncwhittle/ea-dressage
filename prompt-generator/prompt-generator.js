@@ -470,6 +470,255 @@ function ptToMarker(pt) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// LAYER 3 — EVENTS: structured coaching events, no text
+// ═══════════════════════════════════════════════════════════════
+//
+// generateEvents(testMoves, reinTrace, testDefs) → events[]
+//
+// testDefs is required: 'transition' steps carry a 'between' field
+// (e.g. between:['A','F']) naming the coaching zone. This differs from
+// the step's from/to and is NOT preserved in the resolved grad seg.
+//
+// EVENT SCHEMA — fields present on every event:
+//   type       — see event types below
+//   mvI        — movement index in testMoves
+//   atSeg      — segment index in moves[mvI].segs where event occurs
+//   atT        — position within that segment: 0=start, 1=end, 0<t<1=within
+//   atMarker   — named marker string, or null if event falls between markers
+//   phase      — 'test' | 'post-test'
+//                post-test: segments after the halt/salute in the final
+//                movement. These are best-practice visualisation, not
+//                EA-prescribed. Exit direction is rider's choice.
+//
+// Type-specific extra fields:
+//   rein-change     : from, to, softness ('hard'|'soft')
+//   gait-transition : fromGait, toGait, style ('at'|'between'),
+//                     fromMarker, toMarker  (null when style='at')
+//   circle-entry    : hand ('left'|'right'), rein ('left'|'right')
+//   halt            : (no extras — atMarker = 'X')
+//   mv-preview      : nextMvI, nextMvN, nextMvLabel, nextMvCoeff, nextCtx
+//                     nextCtx: first significant event of next mv, pre-resolved
+//                     so Layer 4 need not re-traverse
+//   coeff-banner    : nextMvI, nextMvCoeff
+// ═══════════════════════════════════════════════════════════════
+
+// How many segments does each step type produce?
+// Must stay in sync with translateStep() in ea_dressage_v14.html.
+function countStepSegs(step) {
+  if (step.type === 'splitcircle') return 2;
+  if (step.type === 'exit')        return 3; // line + arc + line
+  return 1;
+}
+
+// Map each step in a movement definition to its segment index range.
+function buildStepSegMap(def) {
+  const map = [];
+  let si = 0;
+  for (const step of def.steps) {
+    const count = countStepSegs(step);
+    map.push({ step, segStart: si, segCount: count });
+    si += count;
+  }
+  return map;
+}
+
+// Reverse-lookup a circle segment to its named marker.
+// E and B share centre (0,30) — startDeg distinguishes them.
+const _CIRC_KEY = { '0,30,180':'E', '0,30,0':'B', '0,10,270':'A', '0,50,90':'C' };
+function circleAtMarker(seg) {
+  return _CIRC_KEY[`${seg.cx},${seg.cy},${seg.startDeg}`] || null;
+}
+
+// Index of last segment in a movement that is neither halt nor gait:'none'.
+function lastActiveSeg(mv) {
+  for (let i = mv.segs.length - 1; i >= 0; i--) {
+    const s = mv.segs[i];
+    if (s.t === 'halt') continue;
+    if (s.g === 'none') continue;
+    if (s.t === 'grad' && s.g1 === 'none') continue;
+    return i;
+  }
+  return -1;
+}
+
+// Gait a segment ends in (used to detect boundary transitions).
+function segEndGait(seg) {
+  if (seg.t === 'halt') return 'halt';
+  if (seg.t === 'grad') return seg.g2;
+  return seg.g || null;
+}
+
+// Determine phase for a segment within a movement.
+// Movements containing an 'exit' step are the final active movements;
+// segments after the halt in such movements are 'post-test'.
+function segPhase(si, mv, def) {
+  const hasExit = def && def.steps.some(s => s.type === 'exit');
+  if (!hasExit) return 'test';
+  const haltIdx = mv.segs.findIndex(s => s.t === 'halt');
+  if (haltIdx < 0) return 'test';
+  return si > haltIdx ? 'post-test' : 'test';
+}
+
+// Pre-resolve the first significant coaching context of movement nextMvI
+// so that mv-preview events carry enough data for Layer 4 templating
+// without re-traversal.
+function resolveNextMvCtx(testMoves, reinTrace, nextMvI) {
+  if (nextMvI >= testMoves.length) return null;
+  const mv = testMoves[nextMvI];
+
+  const reBySegI = {};
+  for (const row of reinTrace) {
+    if (row.mvI !== nextMvI) continue;
+    if (row.events.length) reBySegI[row.segI] = row.events;
+  }
+
+  for (let si = 0; si < mv.segs.length; si++) {
+    const seg = mv.segs[si];
+    if (seg.g === 'none') continue;
+    if (seg.t === 'grad' && seg.g1 === 'none') continue;
+
+    for (const ev of (reBySegI[si] || [])) {
+      if (ev.type === 'rein-change') {
+        return { type:'rein-change', from:ev.from, to:ev.to,
+                 softness:ev.softness, atMarker:ev.atMarker };
+      }
+    }
+    if (seg.t === 'grad' && seg.g1 !== seg.g2 && seg.g1 !== 'none') {
+      return { type:'gait-transition', fromGait:seg.g1, toGait:seg.g2,
+               style:'between' };
+    }
+    if (seg.t === 'circle') {
+      return { type:'circle-entry', atMarker:circleAtMarker(seg),
+               hand: seg.ccw ? 'left' : 'right' };
+    }
+    if (seg.t === 'halt') {
+      return { type:'halt', atMarker:ptToMarker(seg.pt) };
+    }
+  }
+  return null;
+}
+
+function generateEvents(testMoves, reinTrace, testDefs) {
+  const events = [];
+
+  // Index rein trace by "mvI.segI" for O(1) lookup
+  const traceIdx = {};
+  for (const row of reinTrace) traceIdx[`${row.mvI}.${row.segI}`] = row;
+
+  for (let mvI = 0; mvI < testMoves.length; mvI++) {
+    const mv  = testMoves[mvI];
+    const def = testDefs ? testDefs[mvI] : null;
+
+    // Build segIdx → stepEntry so grad events can read step.between
+    const segToStep = {};
+    if (def) {
+      for (const entry of buildStepSegMap(def)) {
+        for (let k = 0; k < entry.segCount; k++) {
+          segToStep[entry.segStart + k] = entry;
+        }
+      }
+    }
+
+    for (let si = 0; si < mv.segs.length; si++) {
+      const seg   = mv.segs[si];
+      const row   = traceIdx[`${mvI}.${si}`];
+      const phase = segPhase(si, mv, def);
+
+      // Skip gait:'none' — no coaching for approach/exit path segments
+      if (!row || row.rein === 'none') continue;
+
+      // ── 1. Rein-change events from Layer 2 trace ──────────────
+      for (const ev of (row.events || [])) {
+        if (ev.type !== 'rein-change') continue;
+        const atT = ev.tInSeg != null ? ev.tInSeg : 1.0;
+        events.push({ type:'rein-change', mvI, atSeg:si, atT, phase,
+          atMarker:ev.atMarker, from:ev.from, to:ev.to, softness:ev.softness });
+      }
+
+      // ── 2. Gait-transition: grad segment (between X and Y) ────
+      if (seg.t === 'grad' && seg.g1 !== 'none' && seg.g2 !== 'none' && seg.g1 !== seg.g2) {
+        const entry      = segToStep[si];
+        const step       = entry ? entry.step : null;
+        const fromMarker = (step && step.between) ? step.between[0]
+                         : ptToMarker(seg.pts[0]);
+        const toMarker   = (step && step.between) ? step.between[1]
+                         : ptToMarker(seg.pts[seg.pts.length - 1]);
+        events.push({ type:'gait-transition', mvI, atSeg:si, atT:seg.f, phase,
+          atMarker:null, fromGait:seg.g1, toGait:seg.g2,
+          style:'between', fromMarker, toMarker });
+      }
+
+      // ── 3. Gait-transition: segment boundary (at a marker) ────
+      // Emit on the earlier segment (atT=1.0) when gait changes between
+      // consecutive non-grad segments within the same movement.
+      if (si > 0 && seg.t !== 'grad') {
+        const prev     = mv.segs[si - 1];
+        const prevGait = segEndGait(prev);
+        const thisGait = segEndGait(seg);
+        if (prevGait && thisGait
+            && prevGait !== thisGait
+            && prevGait !== 'none' && thisGait !== 'none'
+            && prevGait !== 'halt') {
+          const atMarker = (seg.pts ? ptToMarker(seg.pts[0]) : null)
+                        || (seg.t === 'circle' ? circleAtMarker(seg) : null)
+                        || (seg.t === 'halt'   ? ptToMarker(seg.pt)  : null);
+          events.push({ type:'gait-transition', mvI, atSeg:si - 1, atT:1.0,
+            phase: segPhase(si - 1, mv, def),
+            atMarker, fromGait:prevGait, toGait:thisGait,
+            style:'at', fromMarker:null, toMarker:null });
+        }
+      }
+
+      // ── 4. Circle-entry ───────────────────────────────────────
+      // Suppress if the previous segment is also a circle at the same centre
+      // (splitcircle second half — continuation, not a new entry).
+      if (seg.t === 'circle') {
+        const prevSeg = si > 0 ? mv.segs[si - 1] : null;
+        const isDuplicate = prevSeg && prevSeg.t === 'circle'
+                         && prevSeg.cx === seg.cx && prevSeg.cy === seg.cy;
+        if (!isDuplicate) {
+          events.push({ type:'circle-entry', mvI, atSeg:si, atT:0, phase,
+            atMarker:circleAtMarker(seg),
+            hand: seg.ccw ? 'left' : 'right',
+            rein: seg.ccw ? 'left' : 'right' });
+        }
+      }
+
+      // ── 5. Halt ───────────────────────────────────────────────
+      if (seg.t === 'halt') {
+        events.push({ type:'halt', mvI, atSeg:si, atT:0, phase,
+          atMarker:ptToMarker(seg.pt) });
+      }
+    }
+
+    // ── 6. End-of-movement: mv-preview + coeff-banner ─────────
+    // Skip approach movement (gait:'none') and the last movement.
+    if (mv.gait === 'none') continue;
+    const nextMv = testMoves[mvI + 1];
+    if (!nextMv) continue;
+
+    const lastSeg = lastActiveSeg(mv);
+    if (lastSeg < 0) continue;
+
+    events.push({ type:'mv-preview', mvI, atSeg:lastSeg, atT:1.0,
+      atMarker:null, phase: segPhase(lastSeg, mv, def),
+      nextMvI:   mvI + 1,
+      nextMvN:   nextMv.n,
+      nextMvLabel: nextMv.label,
+      nextMvCoeff: nextMv.coeff,
+      nextCtx: resolveNextMvCtx(testMoves, reinTrace, mvI + 1) });
+
+    if (nextMv.coeff > 1) {
+      events.push({ type:'coeff-banner', mvI, atSeg:lastSeg, atT:1.0,
+        atMarker:null, phase: segPhase(lastSeg, mv, def),
+        nextMvI:mvI + 1, nextMvCoeff:nextMv.coeff });
+    }
+  }
+
+  return events;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // EXPORTS (for both Node test harness and browser inline use)
 // ═══════════════════════════════════════════════════════════════
 const PromptGenerator = {
@@ -481,6 +730,8 @@ const PromptGenerator = {
   // Layer 2
   walkRein,
   setMarkers,
+  // Layer 3
+  generateEvents,
   // Constants
   GSPEED_MPS,
 };
