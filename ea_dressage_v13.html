@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EA Dressage — Preliminary 1.2</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2ede6;--surface:#faf8f4;--surface2:#f0ece4;--border:#ddd8ce;
+  --text:#1c1a17;--text2:#6b6456;--text3:#a09688;
+  --navy:#1a3a5c;--navy-light:#e8eef6;--gold:#c9a84c;--gold-light:#fdf3dc;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── HEADER ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:7px 16px;background:var(--navy);flex-shrink:0;gap:8px;flex-wrap:wrap;}
+.htitle{font-family:'Playfair Display',serif;font-size:14px;color:#fff;}
+.hsub{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px;}
+.hc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.hlbl{font-size:10px;color:rgba(255,255,255,0.5);white-space:nowrap;}
+.hbtn{padding:4px 9px;font-size:11px;font-family:'DM Sans',sans-serif;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.15s;}
+.hbtn.active{background:var(--gold);border-color:var(--gold);color:#1c1a17;font-weight:500;}
+.hbtn:hover:not(.active){background:rgba(255,255,255,0.15);}
+/* Speed snap buttons in header */
+.hsnap{padding:4px 10px;font-size:11px;font-family:'DM Sans',sans-serif;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.15s;font-weight:500;}
+.hsnap.active{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.45);color:#fff;}
+.hsnap:hover:not(.active){background:rgba(255,255,255,0.15);}
+.hsep{width:1px;height:16px;background:rgba(255,255,255,0.15);flex-shrink:0;}
+
+/* ── MAIN SPLIT ── */
+.main{display:flex;flex:1;min-height:0;}
+.awrap{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:12px;}
+#cv{display:block;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.1);}
+
+/* ── SIDE PANEL — flex column, controls pinned to bottom ── */
+.side{width:310px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-left:1px solid var(--border);overflow:hidden;}
+
+/* Top info block — fixed, never scrolls */
+.mcard{padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+
+/* Mv number + label + coeff */
+.ch{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
+.cbadge{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.clbl{font-size:13px;font-weight:500;color:var(--navy);flex:1;line-height:1.4;}
+.ccoeff{font-size:10px;font-weight:600;background:var(--gold-light);color:#7a5a00;border:1px solid #e8c96a;border-radius:5px;padding:2px 7px;white-space:nowrap;flex-shrink:0;}
+
+/* Raw test instruction — stub, always visible */
+.craw{font-size:11px;color:var(--text3);font-style:italic;line-height:1.5;padding:5px 9px;background:var(--surface2);border-left:2.5px solid var(--border);border-radius:0 5px 5px 0;margin-bottom:7px;}
+.craw-label{font-size:9px;font-weight:600;letter-spacing:0.06em;color:var(--text3);text-transform:uppercase;margin-bottom:2px;}
+
+/* Prompt box — FIXED HEIGHT so layout never shifts */
+.cprompt-wrap{height:44px;margin-bottom:7px;position:relative;}
+.cprompt{position:absolute;inset:0;font-size:11px;font-weight:500;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:7px;padding:5px 9px;opacity:0;transition:opacity 0.25s;display:flex;align-items:center;pointer-events:none;}
+.cprompt.show{opacity:1;}
+.cprompt-empty{position:absolute;inset:0;font-size:11px;color:var(--text3);border:1px dashed var(--border);border-radius:7px;padding:5px 9px;display:flex;align-items:center;font-style:italic;}
+.cprompt-coeff-banner{font-size:11px;font-weight:600;color:#7a5a00;background:#fdf3dc;border:1px solid #c9a84c;border-radius:6px;padding:4px 9px;margin-bottom:5px;opacity:0;transition:opacity 0.25s;display:none;}
+.cprompt-coeff-banner.show{opacity:1;display:block;}
+
+/* Directive */
+.cdir{font-size:11px;color:var(--text2);font-style:italic;line-height:1.5;padding:5px 9px;background:var(--surface2);border-left:2.5px solid var(--gold);border-radius:0 6px 6px 0;margin-bottom:7px;}
+
+/* Gait pills */
+.cpills{display:flex;flex-wrap:wrap;gap:4px;}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:500;}
+.trot{background:#dbeafe;color:#1d4ed8;}.canter{background:#dcfce7;color:#15803d;}
+.walk{background:#fef3c7;color:#b45309;}.freewalk{background:#ffedd5;color:#c2410c;}
+.halt{background:#fce7f3;color:#be185d;}.stretch{background:#ede9fe;color:#6d28d9;}
+.none{background:#f3f4f6;color:#6b7280;}
+
+/* Movement list — fills remaining space, scrolls */
+.mlist{overflow-y:auto;flex:1;padding:5px;}
+.mb{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:5px 8px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;font-size:11px;color:var(--text2);transition:all 0.1s;margin-bottom:2px;font-family:'DM Sans',sans-serif;}
+.mb:hover{background:var(--surface2);color:var(--text);}
+.mb.active{background:var(--navy-light);border-color:#c5d5e8;color:var(--navy);font-weight:500;}
+.mn{font-size:10px;font-weight:600;min-width:15px;color:var(--text3);}
+.mb.active .mn{color:var(--navy);}
+.mbr{margin-left:auto;}
+.mbcoeff{font-size:9px;font-weight:700;color:#7a5a00;background:var(--gold-light);padding:1px 5px;border-radius:4px;}
+
+/* Controls — pinned to bottom, never moves */
+.ctrls{padding:9px 12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.crow{display:flex;gap:5px;margin-bottom:6px;}
+.cb{flex:1;padding:6px 3px;font-size:11px;font-family:'DM Sans',sans-serif;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text);transition:background 0.1s;}
+.cb:hover{background:var(--surface2);}
+#pb{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:500;}
+#pb:hover{background:#14304e;}
+#lb{background:var(--surface);color:var(--text2);}
+#lb.active{background:#e8f5e9;border-color:#4caf50;color:#1b5e20;font-weight:500;}
+
+/* Speed row in controls */
+.speed-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.speed-snap{padding:3px 8px;font-size:10.5px;font-family:'DM Sans',sans-serif;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);transition:all 0.1s;font-weight:500;}
+.speed-snap.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.speed-snap:hover:not(.active){background:var(--surface2);}
+.speed-slider-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:5px;}
+input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px;}
+.speed-val{font-size:11px;color:var(--text2);min-width:26px;text-align:right;}
+
+/* Progress + legend */
+.progwrap{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.progbg{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progfill{height:100%;background:var(--navy);border-radius:2px;transition:width 0.05s linear;}
+.progtxt{font-size:11px;color:var(--text3);white-space:nowrap;}
+.legend{display:flex;flex-wrap:wrap;gap:5px;}
+.leg{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text2);}
+.ldot{width:7px;height:7px;border-radius:50%;}
+
+/* ── OVERLAY BUBBLE ── */
+.bubble{pointer-events:auto;}
+.bubble-mv{display:flex;align-items:flex-start;gap:8px;}
+.bubble-badge{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bubble-label{font-size:14px;font-weight:600;color:var(--navy);line-height:1.35;flex:1;}
+.bubble-coeff{font-size:11px;font-weight:700;background:var(--gold-light);color:#7a5a00;border:1px solid #e8c96a;border-radius:5px;padding:2px 7px;white-space:nowrap;align-self:flex-start;margin-top:2px;}
+.bubble-prompt{min-height:36px;font-size:15px;font-weight:600;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;padding:7px 11px;line-height:1.4;opacity:0;transition:opacity 0.25s;}
+.bubble-prompt.show{opacity:1;}
+.bubble-prompt-empty{min-height:36px;font-size:13px;color:var(--text3);border:1px dashed var(--border);border-radius:9px;padding:7px 11px;font-style:italic;display:flex;align-items:center;}
+.bubble-coeff-banner{font-size:12px;font-weight:600;color:#7a5a00;background:#fdf3dc;border:1px solid #c9a84c;border-radius:8px;padding:5px 10px;line-height:1.4;opacity:0;transition:opacity 0.25s;display:none;}
+.bubble-coeff-banner.show{opacity:1;display:block;}
+.bubble-prompt-wrap{position:relative;}
+.bubble-gaits{display:flex;flex-wrap:wrap;gap:5px;}
+.bubble-gaits .pill{font-size:12px;padding:3px 10px;}
+.bubble-dir{font-size:12px;color:var(--text2);font-style:italic;line-height:1.5;padding:6px 10px;background:var(--surface2);border-left:3px solid var(--gold);border-radius:0 7px 7px 0;}
+
+/* ── DRAGGABLE FLOAT SHARED ── */
+.float-box{
+  position:fixed;
+  background:rgba(250,248,244,0.97);
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.15);
+  z-index:100;
+  user-select:none;
+}
+.float-handle{
+  cursor:grab;
+  padding:6px 12px 4px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  border-radius:14px 14px 0 0;
+}
+.float-handle:active{cursor:grabbing;}
+.float-handle-dots{font-size:11px;color:var(--text3);letter-spacing:2px;}
+.float-handle-label{font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--text3);text-transform:uppercase;}
+
+@media(max-width:700px),(orientation:portrait){
+  body{height:auto;overflow:auto;}
+  .main{flex-direction:column;}
+  .side{width:100%;border-left:none;border-top:1px solid var(--border);}
+  .hc{display:none;}
+  .bubble{display:none;}
+  .float-ctrl{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><div class="htitle" id="htitle">Preliminary 1.2 · Equestrian Australia</div>
+  <div class="hsub" id="hsub">60×20m arena · Equestrian Australia</div></div>
+  <div class="hc">
+    <span class="hlbl">Test</span>
+    <button class="hbtn active" id="t12" onclick="switchTest('1.2')">Prelim 1.2</button>
+    <button class="hbtn" id="t13" onclick="switchTest('1.3')">Prelim 1.3</button>
+    <button class="hbtn" id="tevb" onclick="switchTest('evb')">Ev Test B</button>
+    <div class="hsep"></div>
+    <span class="hlbl">Arena</span>
+    <button class="hbtn active" id="a60" onclick="setArena(60)">60m</button>
+    <button class="hbtn" id="a40" onclick="setArena(40)">40m</button>
+    <div class="hsep"></div>
+    <span class="hlbl">Mode</span>
+    <button class="hbtn active" id="m-uniform" onclick="setMode('uniform')">Uniform</button>
+    <button class="hbtn" id="m-relative" onclick="setMode('relative')">Relative</button>
+    <button class="hbtn" id="m-timed" onclick="setMode('timed')">Timed 5:30</button>
+    <div class="hsep"></div>
+    <span class="hlbl">Speed</span>
+    <button class="hsnap" id="snap2" onclick="snapSpeed(200)">2×</button>
+    <button class="hsnap" id="snap8" onclick="snapSpeed(800)">8×</button>
+    <div class="hsep"></div>
+    <button class="hbtn" id="exit-toggle" onclick="toggleExit()">Exit: On</button>
+  </div>
+</div>
+<!-- FLOATING BUBBLE -->
+<div class="float-box bubble" id="bubble" style="width:230px;padding:0;">
+  <div class="float-handle" id="bubble-handle">
+    <span class="float-handle-label">Live</span>
+    <span class="float-handle-dots">⠿</span>
+  </div>
+  <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px;">
+    <div class="bubble-mv">
+      <div class="bubble-badge" id="b-dn">·</div>
+      <div style="flex:1;">
+        <div class="bubble-label" id="b-dl">—</div>
+        <div class="bubble-coeff" id="b-dc" style="display:none"></div>
+      </div>
+    </div>
+    <div class="bubble-coeff-banner" id="b-coeff-warn"></div>
+    <div class="bubble-prompt-wrap">
+      <div class="bubble-prompt-empty" id="b-empty">No active prompt</div>
+      <div class="bubble-prompt" id="b-dp"></div>
+    </div>
+    <div class="bubble-gaits" id="b-dg"></div>
+    <div class="bubble-dir" id="b-ddir" style="display:none"></div>
+  </div>
+</div>
+
+<!-- FLOATING CONTROLS -->
+<div class="float-box float-ctrl" id="float-ctrl" style="width:240px;padding:0;">
+  <div class="float-handle" id="ctrl-handle">
+    <span class="float-handle-label">Controls</span>
+    <span class="float-handle-dots">⠿</span>
+  </div>
+  <div style="padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+    <div class="crow">
+      <button class="cb" onclick="resetToStart()">Reset</button>
+      <button class="cb" onclick="rewindToStartOfMove()">Mv ‹‹</button>
+      <button class="cb" onclick="userPrev()">Tr ‹</button>
+      <button class="cb" id="pb" onclick="togglePlay()">Play</button>
+      <button class="cb" onclick="skipToEndOfSeg()">Tr ›</button>
+      <button class="cb" onclick="skipToEndOfMove()">Mv ››</button>
+    </div>
+    <div class="crow">
+      <button class="cb" id="lb" onclick="toggleLoop()">↺ Loop: Off</button>
+    </div>
+    <div class="progwrap">
+      <div class="progbg" id="progbg" style="cursor:pointer;" title="Click or drag to scrub">
+        <div class="progfill" id="pf" style="width:0%"></div>
+      </div>
+      <span class="progtxt" id="pt">· / 16</span>
+      <span class="progtxt" id="substep" style="margin-left:4px;color:var(--gold);"></span>
+    </div>
+    <div class="speed-row">
+      <span style="font-size:10px;color:var(--text3);">Speed</span>
+      <button class="speed-snap" id="psnap2" onclick="snapSpeed(200)">2×</button>
+      <button class="speed-snap" id="psnap8" onclick="snapSpeed(800)">8×</button>
+      <div class="speed-slider-wrap">
+        <input type="range" id="spslider" min="20" max="1000" value="800" step="5" oninput="setSpeed(+this.value)">
+        <span class="speed-val" id="spval">8×</span>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="leg"><div class="ldot" style="background:#2563eb"></div>Trot</div>
+      <div class="leg"><div class="ldot" style="background:#16a34a"></div>Canter</div>
+      <div class="leg"><div class="ldot" style="background:#d97706"></div>Walk</div>
+      <div class="leg"><div class="ldot" style="background:#ea580c"></div>Free walk</div>
+      <div class="leg"><div class="ldot" style="background:#db2777"></div>Halt</div>
+      <div class="leg"><div class="ldot" style="background:#7c3aed"></div>Stretch</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="awrap" style="position:relative;">
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="side">
+    <!-- Movement info (kept for reference, secondary to bubble) -->
+    <div class="mcard">
+      <div class="ch">
+        <div class="cbadge" id="dn">·</div>
+        <div class="clbl" id="dl">—</div>
+        <div class="ccoeff" id="dc" style="display:none"></div>
+      </div>
+      <div class="craw">
+        <div class="craw-label">Test sheet</div>
+        <div id="draw">—</div>
+      </div>
+      <div class="cprompt-coeff-banner" id="coeff-warn"></div>
+      <div class="cprompt-wrap">
+        <div class="cprompt-empty">No active prompt</div>
+        <div class="cprompt" id="dp"></div>
+      </div>
+      <div class="cdir" id="ddir" style="display:none"></div>
+      <div class="cpills" id="dg"></div>
+    </div>
+    <!-- Movement list — full remaining height -->
+    <div class="mlist" id="ml"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// RENDER CONFIG
+// ═══════════════════════════════════════════════════
+const RENDER={
+  offset:0.75,
+  cornerRadius:{
+    walk:0.75,freewalk:0.75,trot:0.75,
+    canter:0.75,stretch:0.75,halt:0.75,none:0.75,
+  },
+  circleOffset:0.75,
+  arenaWidth:20,
+  circleRadius:{
+    r20:10-0.75,   // 9.25 — 20m diameter circle
+    r10:5-0.75,    // 4.25 — 10m diameter circle
+    r5:2.5-0.75,   // 1.75 —  5m diameter circle
+  },
+};
+
+// ═══════════════════════════════════════════════════
+// COORDINATE SYSTEM
+// Real world: A=(0,0) bottom, C=(0,60) top, 20m wide
+// Left long side x=−10, Right x=+10
+// Canvas Y flipped: canvasY = OY + (60−realY)*SC
+// ═══════════════════════════════════════════════════
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let SC=1,OX=0,OY=0;
+function toC(x,y){return[OX+x*SC, OY+(arenaLen-y)*SC];}
+
+// ─── KEY OFFSET COORDINATES ─────────────────────────
+// All horse path coords — 0.75m inside boundary
+// Boundary fence at x=±10, y=0, y=60
+// Horse path at x=±9.25, y=0.75, y=59.25
+const O=RENDER.offset;                       // offset from boundary (0.75)
+const OB=RENDER.arenaWidth/2-RENDER.offset;  // offset boundary x   (9.25)
+
+// Offset corner points of the horse path rectangle
+const BL=[-OB, O];      // bottom-left
+const BR=[ OB, O];      // bottom-right
+const TL=[-OB, 60-O];   // top-left
+const TR=[ OB, 60-O];   // top-right
+
+// Offset A and C (on centreline, offset in Y only)
+const Ao=[0, O];        // A offset  (0, 0.75)
+const Co=[0, 60-O];     // C offset  (0, 59.25)
+
+// Compass waypoints around A — for clean corner arcing at A
+const AE=[ O,  O];      // A-East  (0.75, 0.75)  — right side approach to A
+const AW=[-O,  O];      // A-West  (-0.75, 0.75) — left side approach to A
+const AN=[ 0,  O*2];    // A-North (0, 1.5)       — departure north from A (direction hint)
+
+// Compass waypoints around C — for clean corner arcing at C
+const CE=[ O,  60-O];   // C-East  (0.75, 59.25)
+const CW_=[-O, 60-O];   // C-West  (-0.75, 59.25) (CW_ to avoid clash with Math reserved names)
+const CS=[ 0,  60-O*2]; // C-South (0, 58.5)       — departure south from C
+
+// Named marker offset positions (on long sides, x already at ±9.25)
+const Ko=[-OB, 6];
+const Eo=[-OB, 30];
+const Ho=[-OB, 54];
+const Mo=[ OB, 54];
+const Bo=[ OB, 30];
+const Fo=[ OB, 6];
+const Xo=[ 0,  30];
+
+// Additional centreline markers
+const Do=[ 0,  6];   // D — same Y as K and F
+const Lo=[ 0,  18];  // L
+const Io=[ 0,  42];  // I
+const Go=[ 0,  54];  // G — same Y as H and M
+
+// Additional long side markers
+const Vo=[-OB, 18];  // V — left, 18m from A
+const Po=[ OB, 18];  // P — right, 18m from A
+const So=[-OB, 42];  // S — left, 42m from A
+const Ro=[ OB, 42];  // R — right, 42m from A
+
+// Display positions (on fence, for marker squares)
+const FENCE={
+  // Primary
+  A:[0,0],K:[-10,6],E:[-10,30],H:[-10,54],
+  C:[0,60],M:[10,54],B:[10,30],F:[10,6],
+  // Secondary centreline
+  X:[0,30],G:[0,54],I:[0,42],L:[0,18],D:[0,6],
+  // Secondary long side
+  V:[-10,18],S:[-10,42],R:[10,42],P:[10,18]
+};
+
+// ─── 40m ARENA OFFSET COORDINATES ───────────────────
+// Same x-axis, C moves to y=40, H/M→y=34, E/B/X→y=20, K/F stay at y=6
+const BL40=[-OB, O];    const BR40=[ OB, O];
+const TL40=[-OB,40-O];  const TR40=[ OB,40-O];
+const Ao40=[0,   O];    const Co40=[0,  40-O];
+const AE40=[ O,  O];    const AW40=[-O,  O];
+const CS40=[ 0, 40-O*2];
+const Ko40=[-OB,  6];   const Fo40=[ OB,  6];
+const Eo40=[-OB, 20];   const Bo40=[ OB, 20];
+const Ho40=[-OB, 34];   const Mo40=[ OB, 34];
+const Xo40=[ 0,  20];
+
+const FENCE_40={
+  A:[0,0],K:[-10,6],E:[-10,20],H:[-10,34],
+  C:[0,40],M:[10,34],B:[10,20],F:[10,6],X:[0,20]
+};
+
+// ─── GAIT COLOURS & SPEEDS ──────────────────────────
+const GC={
+  trot:'#2563eb',canter:'#16a34a',walk:'#d97706',
+  freewalk:'#ea580c',halt:'#db2777',stretch:'#7c3aed',none:'#aaa'
+};
+const GL={
+  trot:'Working trot',canter:'Working canter',walk:'Medium walk',
+  freewalk:'Free walk on long rein',halt:'Halt / Salute',
+  stretch:'Stretch trot (rising)',none:'Approach'
+};
+const GS={trot:'trot',canter:'canter',walk:'walk',freewalk:'freewalk',halt:'halt',stretch:'stretch',none:'none'};
+// m/s
+const GSPEED={walk:1.111,freewalk:1.111,trot:2.222,canter:3.333,stretch:2.222,halt:0,none:1.5};
+
+// ─── SEGMENT BUILDERS ───────────────────────────────
+// arc: path with corner arcs (boundary riding)
+// line: straight line (diagonals, centreline)
+// grad: path that transitions gait colour along it (for "between" transitions)
+// circle: parametric circle
+// halt: pause at point
+
+function arc(pts,g){return{t:'arc',pts,g};}
+function line(pts,g){return{t:'line',pts,g};}
+function grad(pts,g1,g2,f){return{t:'grad',pts,g1,g2,f};}
+function circ(cx,cy,r,startDeg,ccw,g,sweep){return{t:'circle',cx,cy,r,startDeg,ccw,g,sweep:sweep||360};}
+function halt(pt){return{t:'halt',pt};}
+// Quadratic bezier: start, control, end — for smooth loops (H→K, M→F)
+function bezier(start,ctrl,end,g){return{t:'bezier',pts:[start,ctrl,end],g};}
+
+// ═══════════════════════════════════════════════════
+// MOVEMENT DATA — fully explicit offset coords
+// ═══════════════════════════════════════════════════
+const MOVES_12=[
+
+{n:0,label:'Approach',
+ desc:'Horse and rider wait outside the arena below A, ready to enter.',
+ gait:'none',dir:'',coeff:1,
+ prompts:[{text:'Enter at A — working trot up the centreline to X, halt and salute',seg:0,dist:5,pre:true}],
+ segs:[line([[0,-5],[0,0]],'none')]},
+
+{n:1,label:'A → X · Halt, salute',
+ desc:'Enter centreline in working trot. Halt at X, salute (min. 3 sec). Proceed in working trot.',
+ gait:'trot',coeff:1,
+ dir:'Regularity and quality of trot; willing, calm transitions; straightness; attentiveness; immobility (min. 3 seconds).',
+ prompts:[
+   {text:'Halt and salute at X',seg:0,dist:6},
+ ],
+ segs:[
+   line([[0,0],Xo],'trot'),
+   halt(Xo),
+ ]},
+
+{n:2,label:'C → M → B · circle right 20m · B → F → A → K',
+ desc:'Proceed centreline X→C. Track right at C. Boundary C→M→B. 20m circle right at B. Continue boundary B→F→A→K.',
+ gait:'trot',coeff:1,
+ dir:'Regularity and quality of trot; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Track right at C — boundary to M then B',seg:0,dist:8},
+   {text:'Circle right 20m at B',seg:1,dist:10},
+   {text:'Continue boundary B → F → A to K',seg:2,dist:10},
+   {text:'Diagonal K → X → M — change rein at M',seg:3,dist:10},
+ ],
+ segs:[
+   line([Xo,CS],'trot'),
+   arc([CS,Co,TR,Mo,Bo],'trot'),
+   circ(0,30,RENDER.circleRadius.r20,0,false,'trot'),
+   arc([Bo,BR,AE,AW,BL,Ko],'trot'),
+ ]},
+
+{n:3,label:'K → X → M · change rein at M · M → C',
+ desc:'Diagonal K→X→M in working trot. At M change rein. Boundary M→C.',
+ gait:'trot',coeff:2,
+ dir:'Regularity and quality of trot; straightness; bend and balance in corner.',
+ prompts:[
+   {text:'Change rein at M — prepare',seg:0,dist:8},
+   {text:'Canter transition between C and H — left lead',seg:1,dist:8},
+ ],
+ segs:[
+   line([Ko,Xo,Mo],'trot'),
+   arc([Mo,TR,Co],'trot'),
+ ]},
+
+{n:4,label:'Between C & H · canter left · H → E',
+ desc:'Transition to working canter left lead between C and H. Continue boundary H→E.',
+ gait:'canter',coeff:2,
+ dir:'Willing, calm transition; regularity and quality of canter; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'Canter left between C and H — continue to E',seg:0,dist:6},
+   {text:'20m circle left at E',seg:1,dist:10},
+ ],
+ segs:[
+   grad([Co,TL,Ho],'trot','canter',0.5),
+   arc([Ho,Eo],'canter'),
+ ]},
+
+{n:5,label:'E · 20m circle left',
+ desc:'20m circle left (CCW) at E.',
+ gait:'canter',coeff:1,
+ dir:'Regularity and quality of canter; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Trot transition between E and K — continue to A',seg:0,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,180,true,'canter'),
+ ]},
+
+{n:6,label:'Between E & K · working trot · K → A',
+ desc:'Transition to working trot between E and K. Continue boundary K→A.',
+ gait:'trot',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of trot; straightness, bend and balance in corner.',
+ prompts:[
+   {text:'20m stretch trot circle at A — shorten reins on return',seg:1,dist:8},
+ ],
+ segs:[
+   grad([Eo,Ko],'canter','trot',0.5),
+   arc([Ko,BL,AW],'trot'),
+ ]},
+
+{n:7,label:'A · 20m circle left (stretch) · A → F',
+ desc:'20m circle left at A in rising stretch trot. Shorten reins before returning to A. Continue A→F.',
+ gait:'stretch',coeff:1,
+ dir:'Forward and downward stretch over the back into a light contact; bend; shape and size of circle; willing, calm transitions.',
+ prompts:[
+   {text:'Shorten reins — working trot at A to F',seg:0,dist:8},
+   {text:'Medium walk transition at F',seg:1,dist:6},
+ ],
+ segs:[
+   circ(0,10,RENDER.circleRadius.r20,270,true,'stretch'),
+   arc([AE,BR,Fo],'trot'),
+ ]},
+
+{n:8,label:'F · medium walk · diagonal F → E',
+ desc:'Transition to medium walk at F. Diagonal F→E.',
+ gait:'walk',coeff:2,
+ dir:'Willing, calm transition; regularity and quality of walk.',
+ prompts:[
+   {text:'Change rein at E — free walk E → M',seg:0,dist:8},
+ ],
+ segs:[
+   line([Fo,Eo],'walk'),
+ ]},
+
+{n:9,label:'E · change rein · free walk E → M · medium walk M → C',
+ desc:'Change rein at E. Free walk E→M. Change rein at M. Medium walk M→C.',
+ gait:'freewalk',coeff:2,
+ dir:'Regularity and quality of walks; reach, overtrack and ground cover; straightness; clear, balanced transitions.',
+ prompts:[
+   {text:'Change rein at M — medium walk to C',seg:0,dist:8},
+   {text:'Working trot at C — boundary C → H → E',seg:1,dist:8},
+ ],
+ segs:[
+   line([Eo,Mo],'freewalk'),
+   arc([Mo,TR,Co],'walk'),
+ ]},
+
+{n:10,label:'C · working trot · C → H → E',
+ desc:'Transition to working trot at C. Boundary C→H→E.',
+ gait:'trot',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of trot; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'20m circle left at E — continue E → K → A → F',seg:0,dist:8},
+ ],
+ segs:[
+   arc([Co,TL,Ho,Eo],'trot'),
+ ]},
+
+{n:11,label:'E · 20m circle left · E → K → A → F',
+ desc:'20m circle left at E. Continue boundary E→K→A→F.',
+ gait:'trot',coeff:1,
+ dir:'Regularity and quality of trot; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Continue boundary E → K → A → F',seg:0,dist:10},
+   {text:'Diagonal F → X → H — change rein at H',seg:1,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,180,true,'trot'),
+   arc([Eo,Ko,BL,AW,AE,BR,Fo],'trot'),
+ ]},
+
+{n:12,label:'F → X → H · change rein at H · H → C',
+ desc:'Diagonal F→X→H. Change rein at H. Boundary H→C.',
+ gait:'trot',coeff:2,
+ dir:'Regularity and quality of trot; straightness; bend and balance in corner.',
+ prompts:[
+   {text:'Change rein at H — prepare',seg:0,dist:8},
+   {text:'Canter transition between C and M — right lead',seg:1,dist:8},
+ ],
+ segs:[
+   line([Fo,Xo,Ho],'trot'),
+   arc([Ho,TL,Co],'trot'),
+ ]},
+
+{n:13,label:'Between C & M · canter right · M → B',
+ desc:'Transition to working canter right lead between C and M. Continue boundary M→B.',
+ gait:'canter',coeff:2,
+ dir:'Willing, calm transition; regularity and quality of canter; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'Canter right between C and M — continue to B',seg:0,dist:6},
+   {text:'20m circle right at B',seg:1,dist:10},
+ ],
+ segs:[
+   grad([Co,TR,Mo],'trot','canter',0.5),
+   arc([Mo,Bo],'canter'),
+ ]},
+
+{n:14,label:'B · 20m circle right',
+ desc:'20m circle right (CW) at B.',
+ gait:'canter',coeff:1,
+ dir:'Regularity and quality of canter; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Trot transition between B and F — continue to A',seg:0,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,0,false,'canter'),
+ ]},
+
+{n:15,label:'Between B & F · working trot · F → A',
+ desc:'Transition to working trot between B and F. Continue boundary F→A.',
+ gait:'trot',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of trot; straightness, bend and balance in corner.',
+ prompts:[
+   {text:'Working trot between B and F — continue to A',seg:0,dist:8},
+   {text:'Turn up centreline at A — halt and salute at X',seg:1,dist:8},
+ ],
+ segs:[
+   grad([Bo,Fo],'canter','trot',0.5),
+   arc([Fo,BR,AE],'trot'),
+ ]},
+
+{n:16,label:'A → X · Halt, salute · Exit CW',
+ desc:'Turn up centreline working trot. Halt at X, salute. Walk to C, exit CW.',
+ gait:'halt',coeff:1,
+ dir:'Bend and balance in turn; regularity and quality of trot; willing, calm transition; straightness; immobility.',
+ prompts:[
+   {text:'Halt and salute at X',seg:0,dist:6},
+   {text:'Walk to C — track right, exit CW on long rein',seg:1,dist:2},
+ ],
+ segs:[
+   arc([AE,Ao,Xo],'trot'),
+   halt([0,30]),
+   line([[0,30],CS],'walk'),
+   arc([CS,Co,TR,Mo,Bo,Fo,BR,AE],'walk'),
+   line([AE,[0,0],[0,-5]],'none'),
+ ]},
+];
+
+
+// ═══════════════════════════════════════════════════
+// PRELIMINARY 1.3 MOVEMENT DATA
+// ═══════════════════════════════════════════════════
+const MOVES_13=[
+
+{n:0,label:'Approach',
+ desc:'Horse and rider wait outside the arena below A, ready to enter.',
+ gait:'none',dir:'',coeff:1,
+ prompts:[{text:'Enter at A — working trot up the centreline to X, halt and salute',seg:0,dist:5,pre:true}],
+ segs:[line([[0,-5],[0,0]],'none')]},
+
+{n:1,label:'A → X · Halt, salute',
+ desc:'Enter centreline in working trot. Halt at X, salute (min. 3 sec). Proceed in working trot.',
+ gait:'trot',coeff:1,
+ dir:'Regularity and quality of trot; willing, calm transitions; straightness; attentiveness; immobility (min. 3 seconds).',
+ prompts:[
+   {text:'Halt and salute at X — then working trot to C, track left',seg:0,dist:10},
+   {text:'Next is ×2 — working trot C → H, loop H to K',seg:0,dist:6},
+ ],
+ segs:[
+   line([[0,0],Xo],'trot'),
+   halt(Xo),
+ ]},
+
+{n:2,label:'C → H · loop H → K',
+ desc:'Proceed centreline X→C. Track left at C. Boundary C→H. Loop H→K.',
+ gait:'trot',coeff:2,
+ dir:'Regularity and quality of trot; changes of bend; shape of loop; balance.',
+ prompts:[
+   {text:'Track left at C — boundary to H',seg:0,dist:10},
+   {text:'Loop from H to K',seg:1,dist:8},
+   {text:'Canter transition between A and F — continue to B',seg:2,dist:10},
+ ],
+ segs:[
+   line([Xo,CS],'trot'),
+   arc([CS,Co,TL,Ho],'trot'),
+   bezier(Ho,Bo,Ko,'trot'),
+ ]},
+
+{n:3,label:'Between A & F · canter left · F → B',
+ desc:'Continue boundary K→A→F. Canter transition between A and F. Continue F→B.',
+ gait:'canter',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of canter; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'Canter left between A and F — continue to B',seg:0,dist:10},
+   {text:'20m circle left at B',seg:1,dist:10},
+ ],
+ segs:[
+   grad([Ko,BL,Ao,BR,Fo],'trot','canter',0.75),
+   arc([Fo,Bo],'canter'),
+ ]},
+
+{n:4,label:'B · 20m circle left · B → M→C',
+ desc:'20m circle left (CCW) at B. Continue boundary B→M→C.',
+ gait:'canter',coeff:1,
+ dir:'Regularity and quality of canter; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Continue boundary B→M to C',seg:0,dist:10},
+   {text:'Boundary C→H — diagonal H→X→F, trot transition at X',seg:1,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,0,true,'canter'),
+   arc([Bo,Mo,TR,Co],'canter'),
+ ]},
+
+{n:5,label:'C → H · diagonal H → X→F',
+ desc:'Boundary C→H in working canter. Diagonal H→X→F, trot transition at X.',
+ gait:'canter',coeff:1,
+ dir:'Regularity and quality of canter; straightness; willing, calm transition.',
+ prompts:[
+   {text:'Diagonal H → X → F — trot transition at X',seg:0,dist:8},
+   {text:'Trot at X — continue to F',seg:1,dist:8},
+   {text:'Medium walk at A',seg:2,dist:8},
+ ],
+ segs:[
+   arc([Co,TL,Ho],'canter'),
+   line([Ho,Xo],'canter'),
+   line([Xo,Fo],'trot'),
+ ]},
+
+{n:6,label:'F → A (trot) · A → K (walk)',
+ desc:'Working trot F→A. Medium walk at A. Medium walk A→K.',
+ gait:'walk',coeff:2,
+ dir:'Willing, calm transition; regularity and quality of walk.',
+ prompts:[
+   {text:'Medium walk at A — continue to K',seg:0,dist:8},
+   {text:'Free walk K → X → H',seg:1,dist:8},
+ ],
+ segs:[
+   arc([Fo,BR,Ao],'trot'),
+   arc([Ao,BL,Ko],'walk'),
+ ]},
+
+{n:7,label:'K → X→H · free walk · H→C',
+ desc:'Free walk K→X→H. Medium walk H→C.',
+ gait:'freewalk',coeff:2,
+ dir:'Regularity and quality of walks; reach, overtrack and ground cover; straightness; clear, balanced transitions.',
+ prompts:[
+   {text:'Free walk — continuing to H',seg:0,dist:8},
+   {text:'Medium walk at H to C',seg:1,dist:8},
+   {text:'Working trot at C — loop M to F',seg:2,dist:8},
+ ],
+ segs:[
+   line([Ko,Xo],'freewalk'),
+   line([Xo,Ho],'freewalk'),
+   arc([Ho,TL,Co],'walk'),
+ ]},
+
+{n:8,label:'C → M · loop M → X→F',
+ desc:'Working trot C→M. Loop M→F.',
+ gait:'trot',coeff:2,
+ dir:'Regularity and quality of trot; changes of bend; shape of loop; balance.',
+ prompts:[
+   {text:'Working trot to M — loop M to F',seg:0,dist:8},
+   {text:'Canter right between A and K',seg:1,dist:10},
+ ],
+ segs:[
+   arc([Co,TR,Mo],'trot'),
+   bezier(Mo,Eo,Fo,'trot'),
+ ]},
+
+{n:9,label:'Between A & K · canter right · K → E',
+ desc:'Continue boundary F→A→K. Canter transition between A and K. Continue K→E.',
+ gait:'canter',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of canter; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'Canter right between A and K — continue to E',seg:0,dist:10},
+   {text:'20m circle right at E',seg:1,dist:10},
+ ],
+ segs:[
+   grad([Fo,BR,Ao,BL,Ko],'trot','canter',0.75),
+   arc([Ko,Eo],'canter'),
+ ]},
+
+{n:10,label:'E · 20m circle right · E → H→C',
+ desc:'20m circle right (CW) at E. Continue boundary E→H→C.',
+ gait:'canter',coeff:1,
+ dir:'Regularity and quality of canter; shape and size of circle; bend; balance.',
+ prompts:[
+   {text:'Continue boundary E → H to C',seg:0,dist:10},
+   {text:'Working trot at C — boundary to B',seg:1,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,180,false,'canter'),
+   arc([Eo,Ho,TL,Co],'canter'),
+ ]},
+
+{n:11,label:'C → M → B · working trot',
+ desc:'Transition to working trot at C. Boundary C→M→B.',
+ gait:'trot',coeff:1,
+ dir:'Willing, calm transition; regularity and quality of trot; bend and balance in corner; straightness.',
+ prompts:[
+   {text:'Stretch trot circle right at B — shorten reins on return',seg:0,dist:10},
+ ],
+ segs:[
+   arc([Co,TR,Mo,Bo],'trot'),
+ ]},
+
+{n:12,label:'B · 20m circle right (stretch) · B → F→A',
+ desc:'20m circle right at B in rising stretch trot. Shorten reins before returning to B. Working trot B→F→A.',
+ gait:'stretch',coeff:2,
+ dir:'Forward and downward stretch over the back into a light contact; bend; shape and size of circle; willing, calm transitions.',
+ prompts:[
+   {text:'Shorten reins — working trot at B to A',seg:0,dist:8},
+   {text:'Turn up centreline — halt and salute at X',seg:1,dist:10},
+ ],
+ segs:[
+   circ(0,30,RENDER.circleRadius.r20,0,false,'stretch'),
+   arc([Bo,Fo,BR,Ao],'trot'),
+ ]},
+
+{n:13,label:'A → X · Halt, salute · Exit CCW',
+ desc:'Turn up centreline working trot. Halt at X, salute. Walk to C, exit CCW.',
+ gait:'halt',coeff:1,
+ dir:'Bend and balance in turn; regularity and quality of trot; willing, calm transition; straightness; immobility.',
+ prompts:[
+   {text:'Halt and salute at X',seg:0,dist:6},
+   {text:'Walk to C — track left, exit CCW on long rein',seg:1,dist:2},
+ ],
+ segs:[
+   arc([AE,Ao,Xo],'trot'),
+   halt([0,30]),
+   line([[0,30],CS],'walk'),
+   arc([CS,Co,TL,Ho,Eo,Ko,BL,AW],'walk'),
+   line([AW,[0,0],[0,-5]],'none'),
+ ]},
+];
+
+// ═══════════════════════════════════════════════════
+// EVENTING TEST B 45cm & 60cm 2020
+// ═══════════════════════════════════════════════════
+const MOVES_EVB=[
+{n:0,label:'Approach',desc:'Horse and rider wait outside the arena below A.',gait:'none',dir:'',coeff:1,
+ prompts:[{text:'Enter at A — working trot up the centreline to C',seg:0,dist:5,pre:true}],
+ segs:[line([[0,-5],Ao],'none')]},
+
+{n:1,label:'A → C · working trot',desc:'Enter working trot at A. Straight up centreline to C.',gait:'trot',coeff:1,dir:'Straightness on centreline, regularity and quality of trot.',
+ prompts:[{text:'Track left at C — boundary to E',seg:0,dist:8}],
+ segs:[line([[0,0],Xo,Co],'trot')]},
+
+{n:2,label:'C → H → E · circle left 20m · E → K → A',desc:'Track left at C. Boundary C→H→E. 20m circle left at E. Boundary E→K→A.',gait:'trot',coeff:1,dir:'Quality and regularity of trot, bend, balance and shape of circle.',
+ prompts:[
+   {text:'Circle left 20m at E',seg:0,dist:8},
+   {text:'Continue on boundary to A',seg:1,dist:10},
+   {text:'At A — circle left, developing canter in second half',seg:2,dist:12},
+ ],
+ segs:[arc([Co,TL,Ho,Eo],'trot'),circ(0,30,RENDER.circleRadius.r20,180,true,'trot'),arc([Eo,Ko,BL,Ao],'trot')]},
+
+{n:3,label:'A · circle left (trot→canter) · A→F→B',desc:'20m circle left at A. Trot first half, canter second half. Boundary A→F→B.',gait:'canter',coeff:1,dir:'Quality of trot and canter, willing transition, shape of circle.',
+ prompts:[
+   {text:'Developing canter — second half of circle',seg:0,dist:8},
+   {text:'Continue on boundary to B',seg:1,dist:7},
+   {text:'Half 20m circle left — B to E',seg:2,dist:8},
+ ],
+ segs:[circ(0,10,RENDER.circleRadius.r20,270,true,'trot',180),circ(0,10,RENDER.circleRadius.r20,90,true,'canter',180),arc([Ao,BR,Fo,Bo],'canter')]},
+
+{n:4,label:'B → E · half circle left',desc:'Half circle left (CCW) from B to E. Centre X, radius 9.25m.',gait:'canter',coeff:1,dir:'Quality and regularity of canter, bend, balance, shape of half circle.',
+ prompts:[{text:'Trot transition between E and K',seg:0,dist:10}],
+ segs:[circ(0,30,RENDER.circleRadius.r20,0,true,'canter',180)]},
+
+{n:5,label:'Between E & K · working trot',desc:'Transition to working trot between E and K.',gait:'trot',coeff:1,dir:'Willing transition, quality of canter and trot.',
+ prompts:[{text:'Working trot — medium walk at A',seg:0,dist:6}],
+ segs:[grad([Eo,Ko],'canter','trot',0.5)]},
+
+{n:6,label:'K → A · working trot → walk at A',desc:'Working trot K→A. Transition to medium walk at A.',gait:'trot',coeff:1,dir:'Quality of trot, willing transition.',
+ prompts:[{text:'Medium walk to F',seg:0,dist:8}],
+ segs:[arc([Ko,BL,Ao],'trot')]},
+
+{n:7,label:'A → F · medium walk',desc:'Medium walk boundary A→F.',gait:'walk',coeff:1,dir:'Calm transition, regularity and quality of walk.',
+ prompts:[{text:'Free walk on long rein — F through X to H, then medium walk to C',seg:0,dist:10}],
+ segs:[arc([Ao,BR,Fo],'walk')]},
+
+{n:8,label:'F → X→H · free walk · H→C · medium walk',desc:'Diagonal F→X→H free walk. Medium walk H→C.',gait:'freewalk',coeff:1,dir:'Quality of walk, horse stretches forward and downward.',
+ prompts:[
+   {text:'Medium walk from H to C',seg:0,dist:8},
+   {text:'Working trot at C — boundary to B',seg:1,dist:8},
+ ],
+ segs:[line([Fo,Xo,Ho],'freewalk'),arc([Ho,TL,Co],'walk')]},
+
+{n:9,label:'C → M → B · working trot',desc:'Working trot at C. Boundary C→TR→M→B.',gait:'trot',coeff:1,dir:'Willing transition, quality of trot.',
+ prompts:[{text:'Circle right 20m at B — then continue to A',seg:0,dist:12}],
+ segs:[arc([Co,TR,Mo,Bo],'trot')]},
+
+{n:10,label:'B · circle right 20m · B→F→A',desc:'20m circle right (CW) at B. Boundary B→F→A.',gait:'trot',coeff:1,dir:'Quality and regularity of trot, bend, balance, shape of circle.',
+ prompts:[
+   {text:'Continue on boundary to A',seg:0,dist:10},
+   {text:'At A — circle right, developing canter in second half',seg:1,dist:12},
+ ],
+ segs:[circ(0,30,RENDER.circleRadius.r20,0,false,'trot'),arc([Bo,Fo,BR,Ao],'trot')]},
+
+{n:11,label:'A · circle right (trot→canter) · A→K→E',desc:'20m circle right at A. Trot first half, canter second half. Boundary A→K→E.',gait:'canter',coeff:1,dir:'Quality of trot and canter, willing transition, shape of circle.',
+ prompts:[
+   {text:'Developing canter — second half of circle',seg:0,dist:8},
+   {text:'Continue on boundary to E',seg:1,dist:7},
+   {text:'Half 20m circle right — E to B',seg:2,dist:8},
+ ],
+ segs:[circ(0,10,RENDER.circleRadius.r20,270,false,'trot',180),circ(0,10,RENDER.circleRadius.r20,90,false,'canter',180),arc([Ao,BL,Ko,Eo],'canter')]},
+
+{n:12,label:'E → B · half circle right',desc:'Half circle right (CW) from E to B. Centre X, radius 9.25m.',gait:'canter',coeff:1,dir:'Quality and regularity of canter, bend, balance, shape of half circle.',
+ prompts:[{text:'Trot transition between B and F — continue to A',seg:0,dist:10}],
+ segs:[circ(0,30,RENDER.circleRadius.r20,180,false,'canter',180)]},
+
+{n:13,label:'Between B & F · working trot · F→A',desc:'Transition to working trot between B and F. Boundary F→A.',gait:'trot',coeff:1,dir:'Willing transition, quality of canter and trot.',
+ prompts:[{text:'At A — working trot up centreline, halt and salute at X',seg:1,dist:10}],
+ segs:[grad([Bo,Fo],'canter','trot',0.5),arc([Fo,BR,Ao],'trot')]},
+
+{n:14,label:'A → X · Halt, salute · Exit CW',desc:'Centreline working trot. Halt at X, salute. Walk to C, exit CW boundary.',gait:'halt',coeff:1,dir:'Bend in turn, straightness, willing transition, immobility.',
+ prompts:[
+   {text:'Halt and salute at X',seg:0,dist:5},
+   {text:'Walk to C — track right, exit CW on long rein',seg:1,dist:2},
+ ],
+ segs:[arc([AE,Ao,Xo],'trot'),halt([0,30]),line([[0,30],CS],'walk'),arc([CS,Co,TR,Mo,Bo,Fo,BR,AE],'walk'),line([AE,[0,0],[0,-5]],'none')]},
+];
+
+
+// ═══════════════════════════════════════════════════
+// ACTIVE TEST
+// ═══════════════════════════════════════════════════
+let activeTest='1.2';
+let arenaLen=60;
+let showExit=true;
+let MOVES=MOVES_12;
+
+
+const TEST_REGISTRY = {
+  '1.2': {
+    label:     'Preliminary 1.2',
+    moves60:   MOVES_12,
+    timedSecs: { 60: 330, 40: 270 },
+  },
+  '1.3': {
+    label:     'Preliminary 1.3',
+    moves60:   MOVES_13,
+    timedSecs: { 60: 330, 40: 270 },
+  },
+  'evb': {
+    label:     'Eventing Test B 45/60cm',
+    moves60:   MOVES_EVB,
+    timedSecs: { 60: 330, 40: 240 },
+  },
+};
+
+function adaptArena(moves60, len) {
+  if (len === 60) return moves60;
+
+  const Y_MAP = new Map([[59.25,39.25],[58.5,38.5],[54,34],[30,20]]);
+  const remapY = y => Y_MAP.has(y) ? Y_MAP.get(y) : y;
+  const remapPt = pt => [pt[0], remapY(pt[1])];
+
+  function remapSeg(seg) {
+    switch (seg.t) {
+      case 'arc': case 'line': case 'grad': case 'bezier':
+        return { ...seg, pts: seg.pts.map(remapPt) };
+      case 'circle':
+        return { ...seg, cy: remapY(seg.cy) };
+      case 'halt':
+        return { ...seg, pt: remapPt(seg.pt) };
+      default: return seg;
+    }
+  }
+
+  return moves60.map(mv => ({
+    ...mv,
+    segs: mv.segs.map(remapSeg),
+  }));
+}
+
+function getTimedSeconds() {
+  return TEST_REGISTRY[activeTest].timedSecs[arenaLen];
+}
+
+function getTitle(){
+  const base={'1.2':'Preliminary 1.2','1.3':'Preliminary 1.3','evb':'Eventing Test B 45/60cm'}[activeTest]||activeTest;
+  return `${base} · ${arenaLen}×20m · Equestrian Australia`;
+}
+
+function updateTimedBtn(){
+  const s=getTimedSeconds();
+  const btn=document.getElementById('m-timed');
+  if(btn) btn.textContent=`Timed ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+function getActiveMoves() {
+  const test = TEST_REGISTRY[activeTest];
+  const moves = adaptArena(test.moves60, arenaLen);
+  if (showExit) return moves;
+  const m = [...moves];
+  const last = { ...m[m.length - 1], segs: [...m[m.length - 1].segs] };
+  const haltIdx = last.segs.findIndex(s => s.t === 'halt');
+  if (haltIdx >= 0) last.segs = last.segs.slice(0, haltIdx + 1);
+  m[m.length - 1] = last;
+  return m;
+}
+
+function switchTest(id){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  isPlaying=false;syncPlayBtn();
+  activeTest=id;
+  MOVES=getActiveMoves();
+  moveCompletedAt.length=0;
+  for(let i=0;i<MOVES.length;i++) moveCompletedAt.push(null);
+  ['12','13','evb'].forEach(t=>{
+    document.getElementById('t'+t)?.classList.toggle('active',t===id.replace('.',''));
+  });
+  document.getElementById('htitle').textContent=getTitle();
+  updateTimedBtn();
+  buildList();
+  startAnim(0,false);
+}
+
+function setArena(len){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  arenaLen=len;
+  MOVES=getActiveMoves();
+  moveCompletedAt.length=0;
+  for(let i=0;i<MOVES.length;i++) moveCompletedAt.push(null);
+  document.getElementById('a60')?.classList.toggle('active',len===60);
+  document.getElementById('a40')?.classList.toggle('active',len===40);
+  document.getElementById('htitle').textContent=getTitle();
+  document.getElementById('hsub').textContent=`${arenaLen}×20m arena · Equestrian Australia`;
+  updateTimedBtn();
+  sizeCanvas();positionBubble();
+  buildList();
+  startAnim(0,false);
+}
+
+function toggleExit(){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  showExit=!showExit;
+  const b=document.getElementById('exit-toggle');
+  b.textContent=`Exit: ${showExit?'On':'Off'}`;
+  b.classList.toggle('active',showExit);
+  MOVES=getActiveMoves();
+  moveCompletedAt.length=0;
+  for(let i=0;i<MOVES.length;i++) moveCompletedAt.push(null);
+  buildList();
+  startAnim(cur,false);
+}
+// ═══════════════════════════════════════════════════
+function makeDraggable(box, handle){
+  let ox=0,oy=0,bx=0,by=0,dragging=false;
+  handle.addEventListener('mousedown',e=>{
+    dragging=true;
+    ox=e.clientX; oy=e.clientY;
+    bx=parseInt(box.style.left)||box.getBoundingClientRect().left;
+    by=parseInt(box.style.top)||box.getBoundingClientRect().top;
+    box.style.left=bx+'px'; box.style.top=by+'px';
+    box.style.right=''; box.style.bottom='';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    box.style.left=(bx+e.clientX-ox)+'px';
+    box.style.top=(by+e.clientY-oy)+'px';
+  });
+  window.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+function positionBubble(){
+  const bubble=document.getElementById('bubble');
+  const ctrl=document.getElementById('float-ctrl');
+  if(!bubble||!ctrl) return;
+  const cvR=cv.getBoundingClientRect();
+  const sideEl=document.querySelector('.side');
+  const sideLeft=sideEl?sideEl.getBoundingClientRect().left:window.innerWidth;
+  // Bubble: right of canvas, vertically near top of arena
+  // Clamp so it doesn't overlap the sidebar
+  const bubbleW=230;
+  let bLeft=cvR.right+12;
+  if(bLeft+bubbleW>sideLeft-8) bLeft=sideLeft-bubbleW-8;
+  bubble.style.left=bLeft+'px';
+  bubble.style.top=Math.max(60,cvR.top+20)+'px';
+  bubble.style.right='';bubble.style.bottom='';
+  // Controls: same left as bubble, aligned with bottom of canvas
+  ctrl.style.left=bLeft+'px';
+  ctrl.style.top=Math.round(cvR.bottom-ctrl.offsetHeight)+'px';
+  ctrl.style.right='';ctrl.style.bottom='';
+}
+
+function sizeCanvas(){
+  const wrap=document.querySelector('.awrap');
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  const vspan=arenaLen+8;
+  const sX=(W-64)/20,sY=(H-20)/vspan;
+  SC=Math.min(sX,sY);
+  const dpr=window.devicePixelRatio||1;
+  const pixelWidth=20*SC+64, pixelHeight=vspan*SC+20;
+  cv.width=pixelWidth*dpr; cv.height=pixelHeight*dpr;
+  cv.style.width=pixelWidth+'px'; cv.style.height=pixelHeight+'px';
+  ctx.scale(dpr,dpr);
+  OX=32+10*SC;
+  OY=10+3*SC;
+}
+
+// ═══════════════════════════════════════════════════
+// ARENA DRAWING
+// ═══════════════════════════════════════════════════
+function drawArena(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#ede8e0';
+  ctx.fillRect(0,0,cv.width,cv.height);
+
+  // Sand surface
+  const[ax,ay]=toC(-10,arenaLen),[bx,by]=toC(10,0);
+  ctx.fillStyle='#f0e4c0';
+  ctx.fillRect(ax,ay,bx-ax,by-ay);
+  ctx.strokeStyle='#8a7050';ctx.lineWidth=1.5;
+  ctx.strokeRect(ax,ay,bx-ax,by-ay);
+
+  // Offset boundary (subtle dashed inner rectangle)
+  const[ox1,oy1]=toC(-OB,arenaLen-O),[ox2,oy2]=toC(OB,O);
+  ctx.strokeStyle='rgba(100,80,40,0.18)';ctx.lineWidth=0.8;ctx.setLineDash([3,4]);
+  ctx.strokeRect(ox1,oy1,ox2-ox1,oy2-oy1);
+  ctx.setLineDash([]);
+
+  // Centre lines (dashed)
+  ctx.setLineDash([4,5]);ctx.strokeStyle='#d8c898';ctx.lineWidth=0.8;
+  const[cx0,cy0]=toC(0,0);const[,cyTop]=toC(0,arenaLen);
+  ctx.beginPath();ctx.moveTo(cx0,cyTop);ctx.lineTo(cx0,cy0);ctx.stroke();
+  const[lx,lym]=toC(-10,arenaLen/2);const[rx]=toC(10,arenaLen/2);
+  ctx.beginPath();ctx.moveTo(lx,lym);ctx.lineTo(rx,lym);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Secondary markers — 60m only, very faint grey, reference only
+  if(arenaLen===60){
+    const sec={
+      X:FENCE.X, G:FENCE.G, I:FENCE.I, L:FENCE.L, D:FENCE.D,
+      V:FENCE.V, S:FENCE.S, R:FENCE.R, P:FENCE.P
+    };
+    const fs2=Math.max(7,SC*0.38);
+    ctx.font=`${fs2}px DM Sans,sans-serif`;
+    ctx.fillStyle='#ccc8b8';ctx.textAlign='center';ctx.textBaseline='middle';
+    for(const[n,p] of Object.entries(sec)){
+      const[px,py]=toC(p[0],p[1]);
+      let ox=0,oy=0;
+      if(p[0]<0)ox=-fs2*1.4; else if(p[0]>0)ox=fs2*1.4;
+      if(p[1]===0)oy=fs2*1.4; else if(p[1]===60)oy=-fs2*1.4;
+      ctx.beginPath();ctx.arc(px,py,1.5,0,Math.PI*2);
+      ctx.fillStyle='#d8d0b8';ctx.fill();
+      ctx.fillStyle='#c8c0a8';
+      ctx.fillText(n,px+(ox||8),py+(oy||-6));
+    }
+  }
+
+  // Primary markers
+  const fence=arenaLen===40?FENCE_40:FENCE;
+  const fs=Math.max(10,SC*0.62);
+  ctx.font=`bold ${fs}px Playfair Display,serif`;
+  for(const[n,p] of Object.entries({A:fence.A,K:fence.K,E:fence.E,H:fence.H,C:fence.C,M:fence.M,B:fence.B,F:fence.F})){
+    const[px,py]=toC(p[0],p[1]);
+    let ox=0,oy=0;
+    if(p[0]<0)ox=-fs*1.5;else if(p[0]>0)ox=fs*1.5;
+    if(p[1]===0)oy=fs*1.4;else if(p[1]===arenaLen)oy=-fs*1.4;
+    ctx.fillStyle='#1a3a5c';ctx.fillRect(px-4,py-4,8,8);
+    ctx.fillStyle='#fff';ctx.fillRect(px-3,py-3,6,6);
+    ctx.fillStyle='#1a3a5c';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n,px+ox,py+oy);
+  }
+
+  // X marker
+  const[xx,xy]=toC(0,arenaLen/2);
+  ctx.font=`${Math.max(9,SC*0.52)}px DM Sans,sans-serif`;
+  ctx.fillStyle='#a09070';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('X',xx+9,xy-8);
+  ctx.beginPath();ctx.arc(xx,xy,2.5,0,Math.PI*2);ctx.fillStyle='#c0b080';ctx.fill();
+
+  // Start marker
+  const[sx,sy]=toC(0,-5);
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(sx,sy+10);ctx.lineTo(sx,toC(0,0)[1]);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#aaa';ctx.font=`${Math.max(9,SC*0.48)}px DM Sans,sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('start',sx,sy);
+}
+
+// ═══════════════════════════════════════════════════
+// PATH DRAWING WITH CORNER ARCS
+// CR = corner radius in metres
+// ═══════════════════════════════════════════════════
+const CR=RENDER.cornerRadius.trot; // all gaits equal; gait-specific lookup deferred to buildArcCmds
+
+function buildArcCmds(pts){
+  const n=pts.length;
+  if(n<2)return[];
+  const R=CR*SC;
+  const cp=pts.map(p=>toC(p[0],p[1]));
+  const cmds=[{t:'M',p:cp[0]}];
+  for(let i=1;i<n;i++){
+    if(i<n-1){
+      const pr=cp[i-1],cu=cp[i],nx=cp[i+1];
+      const d1=Math.hypot(cu[0]-pr[0],cu[1]-pr[1]);
+      const d2=Math.hypot(nx[0]-cu[0],nx[1]-cu[1]);
+      if(d1<0.001||d2<0.001){cmds.push({t:'L',p:cu});continue;}
+      const t=Math.min(R,d1*0.45,d2*0.45);
+      const u1x=(cu[0]-pr[0])/d1,u1y=(cu[1]-pr[1])/d1;
+      const u2x=(nx[0]-cu[0])/d2,u2y=(nx[1]-cu[1])/d2;
+      cmds.push({t:'L',p:[cu[0]-u1x*t,cu[1]-u1y*t]});
+      cmds.push({t:'Q',c:cu,p:[cu[0]+u2x*t,cu[1]+u2y*t]});
+    } else {
+      cmds.push({t:'L',p:cp[i]});
+    }
+  }
+  return cmds;
+}
+
+function cmdsTotalLen(cmds){
+  let len=0;
+  for(let i=1;i<cmds.length;i++){
+    const a=cmds[i-1],b=cmds[i];
+    const p1=a.p,p2=b.p;
+    len+=b.t==='Q'?Math.hypot(p2[0]-p1[0],p2[1]-p1[1])*1.12:Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+  }
+  return len;
+}
+
+function drawCmds(cmds,progress,color,alpha,lw){
+  if(!cmds.length)return;
+  const total=cmdsTotalLen(cmds);
+  const target=total*progress;
+  let drawn=0;
+  ctx.globalAlpha=alpha;ctx.strokeStyle=color;
+  ctx.lineWidth=lw||(alpha===1?2.5:1.5);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(cmds[0].p[0],cmds[0].p[1]);
+  for(let i=1;i<cmds.length;i++){
+    const cmd=cmds[i],prev=cmds[i-1];
+    const p1=prev.p,p2=cmd.p;
+    const sl=cmd.t==='Q'?Math.hypot(p2[0]-p1[0],p2[1]-p1[1])*1.12:Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+    if(drawn+sl<=target){
+      if(cmd.t==='L')ctx.lineTo(p2[0],p2[1]);
+      else ctx.quadraticCurveTo(cmd.c[0],cmd.c[1],p2[0],p2[1]);
+      drawn+=sl;
+    } else {
+      const t2=(target-drawn)/sl;
+      if(cmd.t==='L'){
+        ctx.lineTo(p1[0]+(p2[0]-p1[0])*t2,p1[1]+(p2[1]-p1[1])*t2);
+      } else {
+        const c=cmd.c;
+        const mx=p1[0]+(c[0]-p1[0])*t2,my=p1[1]+(c[1]-p1[1])*t2;
+        const nx=c[0]+(p2[0]-c[0])*t2,ny=c[1]+(p2[1]-c[1])*t2;
+        ctx.quadraticCurveTo(mx,my,mx+(nx-mx)*t2,my+(ny-my)*t2);
+      }
+      break;
+    }
+  }
+  ctx.stroke();ctx.globalAlpha=1;
+}
+
+function getPosFromCmds(cmds,progress){
+  if(!cmds.length)return null;
+  const total=cmdsTotalLen(cmds);
+  const target=total*progress;
+  let drawn=0,lastP=cmds[0].p;
+  for(let i=1;i<cmds.length;i++){
+    const cmd=cmds[i],prev=cmds[i-1];
+    const p1=prev.p,p2=cmd.p;
+    const sl=cmd.t==='Q'?Math.hypot(p2[0]-p1[0],p2[1]-p1[1])*1.12:Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+    if(drawn+sl<=target){lastP=p2;drawn+=sl;}
+    else{
+      const t2=(target-drawn)/sl;
+      if(cmd.t==='L')return[p1[0]+(p2[0]-p1[0])*t2,p1[1]+(p2[1]-p1[1])*t2];
+      const c=cmd.c;
+      const mx=p1[0]+(c[0]-p1[0])*t2,my=p1[1]+(c[1]-p1[1])*t2;
+      const nx=c[0]+(p2[0]-c[0])*t2,ny=c[1]+(p2[1]-c[1])*t2;
+      return[mx+(nx-mx)*t2,my+(ny-my)*t2];
+    }
+  }
+  return lastP;
+}
+
+// Simple line path (no corner arcs — for diagonals, centreline)
+function drawLinePath(pts,g,progress,alpha,lw){
+  const n=pts.length,cp=pts.map(p=>toC(p[0],p[1]));
+  const segs=n-1,drawn=progress*segs;
+  ctx.globalAlpha=alpha;ctx.strokeStyle=GC[g]||'#999';
+  ctx.lineWidth=lw||(alpha===1?2.5:1.5);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(cp[0][0],cp[0][1]);
+  for(let i=1;i<=segs;i++){
+    const t=Math.min(1,Math.max(0,drawn-(i-1)));
+    if(t<=0)break;
+    ctx.lineTo(cp[i-1][0]+(cp[i][0]-cp[i-1][0])*t,cp[i-1][1]+(cp[i][1]-cp[i-1][1])*t);
+  }
+  ctx.stroke();ctx.globalAlpha=1;
+}
+
+function getLinePosAt(pts,progress){
+  const n=pts.length,cp=pts.map(p=>toC(p[0],p[1]));
+  const segs=n-1,drawn=progress*segs;
+  const s=Math.min(segs-1,Math.floor(drawn)),t=drawn-s;
+  return[cp[s][0]+(cp[s+1][0]-cp[s][0])*t,cp[s][1]+(cp[s+1][1]-cp[s][1])*t];
+}
+
+// Gradient segment — draws two overlapping strokes with alpha fade at transition point
+
+// Better gradient: draw full path in g2, then overdraw beginning in g1
+function drawGradPathV2(pts,g1,g2,transF,progress,alpha,lw){
+  const cmds=buildArcCmds(pts);
+  if(!cmds.length)return;
+  if(progress<=transF){
+    drawCmds(cmds,progress,GC[g1],alpha,lw);
+  } else {
+    drawCmds(cmds,progress,GC[g2],alpha,lw);
+    drawCmds(cmds,transF,GC[g1],alpha,lw);
+  }
+}
+
+// Parametric circle — pure trig, no ctx.arc winding issues
+const CSTEPS=120;
+function circlePoints(cx,cy,r,startDeg,ccw,sweep){
+  sweep=sweep||360;
+  const pts=[];
+  for(let i=0;i<=CSTEPS;i++){
+    const a=(startDeg+(ccw?sweep:-sweep)*(i/CSTEPS))*Math.PI/180;
+    pts.push(toC(cx+r*Math.cos(a),cy+r*Math.sin(a)));
+  }
+  return pts;
+}
+
+function drawCircleSeg(seg,progress,alpha){ drawCircleSegW(seg,progress,alpha,null); }
+
+function drawCircleSegW(seg,progress,alpha,lw,color){
+  const pts=circlePoints(seg.cx,seg.cy,seg.r,seg.startDeg,seg.ccw,seg.sweep);
+  const n=Math.max(2,Math.floor(progress*CSTEPS)+1);
+  ctx.globalAlpha=alpha;ctx.strokeStyle=color||GC[seg.g];
+  ctx.lineWidth=lw||(alpha===1?2.5:1.5);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<n;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.stroke();ctx.globalAlpha=1;
+}
+
+function getCirclePos(seg,progress){
+  const sweep=seg.sweep||360;
+  const a=(seg.startDeg+(seg.ccw?sweep:-sweep)*progress)*Math.PI/180;
+  return toC(seg.cx+seg.r*Math.cos(a),seg.cy+seg.r*Math.sin(a));
+}
+
+// ─── Quadratic bezier segment ────────────────────────
+// pts[0]=start, pts[1]=control, pts[2]=end (real-world coords)
+// Sampled parametrically — horse dot stays perfectly in sync
+const BSTEPS=120;
+
+function bezierPoint(p0,p1,p2,t){
+  // Q(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+  const mt=1-t;
+  return[
+    mt*mt*p0[0]+2*mt*t*p1[0]+t*t*p2[0],
+    mt*mt*p0[1]+2*mt*t*p1[1]+t*t*p2[1]
+  ];
+}
+
+function bezierCanvasPoints(seg){
+  const[p0,p1,p2]=seg.pts;
+  const pts=[];
+  for(let i=0;i<=BSTEPS;i++){
+    const p=bezierPoint(p0,p1,p2,i/BSTEPS);
+    pts.push(toC(p[0],p[1]));
+  }
+  return pts;
+}
+
+function drawBezierSeg(seg,progress,alpha,lw){
+  const pts=bezierCanvasPoints(seg);
+  const n=Math.max(2,Math.floor(progress*BSTEPS)+1);
+  ctx.globalAlpha=alpha;ctx.strokeStyle=GC[seg.g]||'#999';
+  ctx.lineWidth=lw||(alpha===1?2.5:1.5);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<n;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.stroke();ctx.globalAlpha=1;
+}
+
+function getBezierPos(seg,progress){
+  const[p0,p1,p2]=seg.pts;
+  const p=bezierPoint(p0,p1,p2,progress);
+  return toC(p[0],p[1]);
+}
+
+function bezierLenM(seg){
+  // Approximate arc length by sampling
+  const[p0,p1,p2]=seg.pts;
+  let len=0;
+  let prev=p0;
+  for(let i=1;i<=BSTEPS;i++){
+    const p=bezierPoint(p0,p1,p2,i/BSTEPS);
+    len+=Math.hypot(p[0]-prev[0],p[1]-prev[1]);
+    prev=p;
+  }
+  return len;
+}
+
+// ─── Draw / position any segment ────────────────────
+function drawSeg(seg,progress,alpha,pulse,now){
+  const lw=pulse&&alpha===1?4:null; // coeff solid: 4px (vs normal 2.5px)
+  if(pulse&&alpha===1&&seg.t!=='halt'){
+    const t=now||performance.now();
+    const pulseAlpha=0.7+0.25*Math.sin(t*0.004);
+    if(seg.t==='circle'){
+      drawCircleSegW(seg,progress,pulseAlpha,8,'#c9a84c');
+    } else if(seg.t==='bezier'){
+      const bpts=bezierCanvasPoints(seg);
+      const n=Math.max(2,Math.floor(progress*BSTEPS)+1);
+      ctx.globalAlpha=pulseAlpha;ctx.strokeStyle='#c9a84c';
+      ctx.lineWidth=8;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(bpts[0][0],bpts[0][1]);
+      for(let i=1;i<n;i++) ctx.lineTo(bpts[i][0],bpts[i][1]);
+      ctx.stroke();ctx.globalAlpha=1;
+    } else {
+      const goldCmds=buildArcCmds(seg.pts||[]);
+      drawCmds(goldCmds,progress,'#c9a84c',pulseAlpha,8);
+    }
+  }
+  if(seg.t==='arc') drawCmds(buildArcCmds(seg.pts),progress,GC[seg.g],alpha,lw);
+  else if(seg.t==='line') drawLinePath(seg.pts,seg.g,progress,alpha,lw);
+  else if(seg.t==='grad') drawGradPathV2(seg.pts,seg.g1,seg.g2,seg.f,progress,alpha,lw);
+  else if(seg.t==='circle') drawCircleSegW(seg,progress,alpha,lw);
+  else if(seg.t==='bezier') drawBezierSeg(seg,progress,alpha,lw);
+  else if(seg.t==='halt'){
+    const[hx,hy]=toC(seg.pt[0],seg.pt[1]);
+    ctx.globalAlpha=alpha;ctx.fillStyle=GC.halt;
+    ctx.beginPath();ctx.arc(hx,hy,7*Math.min(1,progress*3),0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+function getSegPos(seg,progress){
+  if(seg.t==='arc') return getPosFromCmds(buildArcCmds(seg.pts),progress);
+  if(seg.t==='line') return getLinePosAt(seg.pts,progress);
+  if(seg.t==='grad') return getPosFromCmds(buildArcCmds(seg.pts),progress);
+  if(seg.t==='circle') return getCirclePos(seg,progress);
+  if(seg.t==='bezier') return getBezierPos(seg,progress);
+  if(seg.t==='halt') return toC(seg.pt[0],seg.pt[1]);
+  return null;
+}
+
+function getSegGait(seg,progress){
+  if(seg.t==='grad') return progress<seg.f?seg.g1:seg.g2;
+  return seg.g||'trot';
+}
+
+function drawHorse(pos,g,coeff,now){
+  if(!pos)return;
+  const c=GC[g]||'#999';
+  const R=coeff>1?9:7; // 1.3× larger on coeff movements
+  if(coeff&&coeff>1){
+    const t=now||performance.now();
+    const pr=R+2+2*Math.sin(t*0.005);
+    const goldAlpha=0.7+0.25*Math.sin(t*0.005);
+    ctx.globalAlpha=goldAlpha;
+    ctx.strokeStyle='#c9a84c';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(pos[0],pos[1],pr,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  // Horse circle
+  ctx.shadowColor=c;ctx.shadowBlur=10;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(pos[0],pos[1],R,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle=c;ctx.beginPath();ctx.arc(pos[0],pos[1],R-2,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(pos[0],pos[1],R,0,Math.PI*2);ctx.stroke();
+  // Coeff bubble drawn LAST so always on top
+  if(coeff&&coeff>1){
+    const t=now||performance.now();
+    const pr=R+2+2*Math.sin(t*0.005);
+    const label=`×${coeff}`;
+    const fs=Math.max(13,SC*0.7);
+    ctx.font=`bold ${fs}px DM Sans,sans-serif`;
+    const bx=pos[0],by=pos[1]-pr-16;
+    const bw=ctx.measureText(label).width+20;
+    const bh=24,br=6;
+    const bx0=bx-bw/2,by0=by-bh/2;
+    ctx.globalAlpha=0.97;
+    ctx.fillStyle='#c9a84c';
+    ctx.beginPath();
+    ctx.moveTo(bx0+br,by0);
+    ctx.lineTo(bx0+bw-br,by0);ctx.arcTo(bx0+bw,by0,bx0+bw,by0+br,br);
+    ctx.lineTo(bx0+bw,by0+bh-br);ctx.arcTo(bx0+bw,by0+bh,bx0+bw-br,by0+bh,br);
+    ctx.lineTo(bx0+br,by0+bh);ctx.arcTo(bx0,by0+bh,bx0,by0+bh-br,br);
+    ctx.lineTo(bx0,by0+br);ctx.arcTo(bx0,by0,bx0+br,by0,br);
+    ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#1c1a17';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(label,bx,by);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SPEED & TIMING
+// ═══════════════════════════════════════════════════
+let speedMode='uniform',speedMult=8;
+let cachedTotalM=0;
+
+function recalcTotalM(){cachedTotalM=MOVES.reduce((s,m)=>s+m.segs.reduce((s2,sg)=>s2+segLenM(sg),0),0);}
+const HALT_MS=2000;
+
+function pathLenM(pts){
+  let len=0;
+  for(let i=1;i<pts.length;i++) len+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+  return len;
+}
+
+function segLenM(seg){
+  if(seg.t==='halt')return 0;
+  if(seg.t==='circle')return 2*Math.PI*seg.r*((seg.sweep||360)/360);
+  if(seg.t==='bezier')return bezierLenM(seg);
+  return pathLenM(seg.pts);
+}
+
+function segDurMs(seg){
+  if(seg.t==='halt')return HALT_MS/speedMult;
+  const len=segLenM(seg);
+  if(len<0.001)return 50;
+  let mps;
+  if(speedMode==='uniform'){
+    mps=GSPEED.trot;
+  } else {
+    const g=seg.t==='grad'?seg.g2:seg.g;
+    mps=(GSPEED[g]||GSPEED.trot)*(arenaLen/60);
+  }
+  if(speedMode==='timed'){
+    mps=cachedTotalM/getTimedSeconds();
+    const g=seg.t==='grad'?seg.g2:seg.g;
+    mps*=(GSPEED[g]||GSPEED.trot)/GSPEED.trot;
+  }
+  return(len/mps)*1000/speedMult;
+}
+
+function setMode(m){
+  speedMode=m;
+  ['uniform','relative','timed'].forEach(id=>document.getElementById('m-'+id).classList.toggle('active',id===m));
+  recalcTotalM();
+}
+function setSpeed(v){
+  // Preserve current position before changing speed
+  if(segT0!==null&&isPlaying){
+    const now=performance.now();
+    const mv=MOVES[cur];
+    const seg=mv&&mv.segs[segI];
+    if(seg){
+      const oldDur=segDurMs(seg); // duration at OLD speed
+      const el=now-segT0;
+      const sP=Math.min(1,el/oldDur); // current progress fraction
+      speedMult=v/100; // update speed
+      const newDur=segDurMs(seg); // duration at NEW speed
+      // Recalculate segT0 so sP stays the same
+      segT0=now-sP*newDur;
+    } else {
+      speedMult=v/100;
+    }
+  } else {
+    speedMult=v/100;
+  }
+  const d=speedMult<1?2:1;
+  const label=speedMult.toFixed(d).replace(/\.?0+$/,'')+'×';
+  document.getElementById('spval').textContent=label;
+  document.getElementById('spslider').value=v;
+  ['snap2','snap8','psnap2','psnap8'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const target=id.includes('2')?200:800;
+    el.classList.toggle('active',v===target);
+  });
+}
+function snapSpeed(v){setSpeed(v);}
+
+// ═══════════════════════════════════════════════════
+// PATH-DISTANCE PROMPT ENGINE
+// Prompt schema: { text, seg, dist }
+//   seg  — index into this movement's segs[] array
+//   dist — metres before the END of segs[seg] to fire
+//
+// "How many metres of path travel before this segment
+//  ends should the rider hear this callout."
+//
+// The trigger point is unambiguous: it exists exactly
+// once per movement. When the movement ends the prompt
+// is gone — no coordinate matching, no global state.
+// ═══════════════════════════════════════════════════
+
+// Returns metres remaining from current position (sI, sP)
+// to the end of target segment tSeg.
+// Returns null if tSeg is already behind the horse (sI > tSeg).
+function pathDistToSegEnd(segs,sI,sP,tSeg){
+  if(sI>tSeg) return null; // horse has passed this segment
+  let acc=0;
+  for(let i=sI;i<=tSeg;i++){
+    const seg=segs[i];
+    const fromP=i===sI?sP:0;
+    const fullLen=segLenM(seg);
+    acc+=fullLen*(1-fromP);
+  }
+  return acc;
+}
+
+// ═══════════════════════════════════════════════════
+// ANIMATION ENGINE — single rAF loop, immediate pause
+// ═══════════════════════════════════════════════════
+let cur=0,segI=0,segT0=null,isPlaying=false,looping=false,animFrame=null;
+let segElapsedAtPause=0,resumeOffset=false;
+
+// ── PROMPT ENGINE STATE ──────────────────────────────
+// Per-prompt fire timestamps — each prompt records WHEN it first fired.
+// This replaces the old single-prompt hold model and fixes the race
+// condition where a held prompt blocked the next one from displaying.
+const PROMPT_MIN_MS=3000,PROMPT_FADE_MS=500;
+let promptFireTimes=[];  // promptFireTimes[pi] = performance.now() when pi first fired, or null
+let promptSealed=[];     // promptSealed[pi] = true if prompt is permanently done this movement
+let coeffHoldSince=null;
+
+function resetPromptState(numPrompts){
+  promptFireTimes=new Array(numPrompts).fill(null);
+  promptSealed=new Array(numPrompts).fill(false);
+}
+
+// ═══════════════════════════════════════════════════
+// PROMPT EVALUATOR — pure function, no DOM access
+// Takes movement data + horse position + time.
+// Returns {text:string|null, opacity:number}.
+// All hold/fade/seal logic lives here.
+// ═══════════════════════════════════════════════════
+
+// Convert remaining path metres to real milliseconds at current speed
+function pathMetresToMs(segs,sI,sP,targetMetres){
+  let rem=targetMetres;
+  for(let i=sI;i<segs.length;i++){
+    const seg=segs[i];
+    const fromP=i===sI?sP:0;
+    const fullLen=segLenM(seg);
+    const segRem=fullLen*(1-fromP);
+    const segDur=segDurMs(seg)*(1-fromP);
+    if(rem<=segRem) return segDur*(rem/segRem);
+    rem-=segRem;
+  }
+  return Infinity;
+}
+
+// Check whether a single prompt's trigger condition is met RIGHT NOW
+function isPromptTriggered(p,segs,sI,sP){
+  const anchor=p.anchor||'before_end';
+  if(p.pre) return sI===0;
+  if(anchor==='at_start'){
+    if(sI<p.seg) return false;
+    if(sI>p.seg) return false; // past this segment — not actively triggering
+    const progressM=segLenM(segs[sI])*sP;
+    return progressM>=(p.dist||0);
+  }
+  // before_end
+  const pd=pathDistToSegEnd(segs,sI,sP,p.seg);
+  if(pd===null) return false;
+  return pd<=(p.dist||6);
+}
+
+// Check whether a prompt's trigger zone is permanently behind the horse
+function isPromptBehind(p,segs,sI,sP){
+  const anchor=p.anchor||'before_end';
+  if(p.pre) return sI>0;
+  if(anchor==='at_start') return sI>p.seg;
+  // before_end: behind if horse is past the target segment entirely
+  return pathDistToSegEnd(segs,sI,sP,p.seg)===null;
+}
+
+// Compute how many real ms until a given prompt would fire from current position
+function msUntilPromptFires(p,segs,sI,sP){
+  const anchor=p.anchor||'before_end';
+  if(p.pre) return sI===0?0:Infinity;
+  if(anchor==='at_start'){
+    if(sI>p.seg) return Infinity;
+    if(sI===p.seg){
+      const progressM=segLenM(segs[sI])*sP;
+      const triggerM=p.dist||0;
+      if(progressM>=triggerM) return 0;
+      return pathMetresToMs(segs,sI,sP,triggerM-progressM);
+    }
+    let acc=0;
+    for(let i=sI;i<p.seg;i++) acc+=segLenM(segs[i])*(i===sI?1-sP:1);
+    acc+=p.dist||0;
+    return pathMetresToMs(segs,sI,sP,acc);
+  }
+  // before_end
+  const pd=pathDistToSegEnd(segs,sI,sP,p.seg);
+  if(pd===null) return Infinity;
+  const gap=pd-(p.dist||6);
+  return gap<=0?0:pathMetresToMs(segs,sI,sP,gap);
+}
+
+// Main evaluator — returns {text, opacity} for what to display this frame
+function evaluatePrompts(mv,sI,sP,now){
+  const prompts=mv.prompts||[];
+  if(!prompts.length) return {text:null,opacity:0};
+
+  // Ensure state arrays are sized (handles mid-movement resets)
+  while(promptFireTimes.length<prompts.length) promptFireTimes.push(null);
+  while(promptSealed.length<prompts.length) promptSealed.push(false);
+
+  // PASS 1: Update fire times and seal status for every prompt
+  for(let pi=0;pi<prompts.length;pi++){
+    if(promptSealed[pi]) continue;
+    const p=prompts[pi];
+
+    if(isPromptTriggered(p,mv.segs,sI,sP)){
+      // Prompt is actively triggering — record fire time if first time
+      if(promptFireTimes[pi]===null) promptFireTimes[pi]=now;
+    } else if(isPromptBehind(p,mv.segs,sI,sP)){
+      // Horse has moved past this prompt's zone
+      if(promptFireTimes[pi]!==null){
+        // It fired before — let hold/fade finish, then seal
+        const age=now-promptFireTimes[pi];
+        // Compute this prompt's effective hold duration
+        const holdMs=computeHoldMs(pi,prompts,mv.segs,sI,sP);
+        if(age>=holdMs+PROMPT_FADE_MS) promptSealed[pi]=true;
+      } else {
+        // Never fired — seal immediately (horse skipped past it)
+        promptSealed[pi]=true;
+      }
+    }
+  }
+
+  // PASS 2: Find the best prompt to display — latest-fired wins
+  // This is the key fix: instead of breaking on the first match,
+  // we check ALL prompts and pick the one that fired most recently.
+  let bestPi=-1, bestFireTime=-1;
+
+  for(let pi=0;pi<prompts.length;pi++){
+    if(promptSealed[pi]) continue;
+    if(promptFireTimes[pi]===null) continue;
+
+    const age=now-promptFireTimes[pi];
+    const holdMs=computeHoldMs(pi,prompts,mv.segs,sI,sP);
+    if(age>=holdMs+PROMPT_FADE_MS){
+      // Hold + fade fully expired — seal it now
+      promptSealed[pi]=true;
+      continue;
+    }
+
+    // This prompt is still visible — pick the most recently fired
+    if(promptFireTimes[pi]>bestFireTime){
+      bestFireTime=promptFireTimes[pi];
+      bestPi=pi;
+    }
+  }
+
+  if(bestPi===-1) return {text:null,opacity:0};
+
+  // Calculate opacity for the winner
+  const age=now-promptFireTimes[bestPi];
+  const holdMs=computeHoldMs(bestPi,prompts,mv.segs,sI,sP);
+
+  let opacity=1;
+  if(age>=holdMs){
+    // In fade period
+    opacity=Math.max(0,1-(age-holdMs)/PROMPT_FADE_MS);
+  }
+
+  return {text:prompts[bestPi].text, opacity};
+}
+
+// Compute the effective hold duration for a prompt, accounting for:
+// 1. Proximity of the next prompt (smart ceiling)
+// 2. Short segments (clamp to segment traversal time)
+function computeHoldMs(pi,prompts,segs,sI,sP){
+  // Find ms until the next unfired prompt fires
+  let msToNext=Infinity;
+  for(let ni=pi+1;ni<prompts.length;ni++){
+    if(promptSealed[ni]) continue;
+    const ms=msUntilPromptFires(prompts[ni],segs,sI,sP);
+    if(ms<msToNext){msToNext=ms;break;}
+  }
+  // Smart hold: min(3s, gap to next prompt minus fade buffer)
+  let hold=Math.min(PROMPT_MIN_MS,Math.max(PROMPT_FADE_MS,msToNext-PROMPT_FADE_MS));
+
+  // Clamp for short segments: don't hold longer than 80% of the segment's duration
+  const p=prompts[pi];
+  const anchor=p.anchor||'before_end';
+  if(anchor==='at_start'){
+    const segDur=segDurMs(segs[p.seg]);
+    hold=Math.min(hold,segDur*0.8);
+  }
+
+  return Math.max(PROMPT_FADE_MS,hold);
+}
+
+// ── PROMPT DISPLAY — DOM bridge (keeps evaluator pure) ──
+function displayPrompt(result){
+  const pe=document.getElementById('dp');
+  const bp=document.getElementById('b-dp');
+  const bempty=document.getElementById('b-empty');
+
+  if(result.text&&result.opacity>0){
+    const op=result.opacity;
+    pe.textContent=result.text;
+    pe.classList.add('show');pe.style.opacity=op===1?'':op;
+    if(bp){bp.textContent=result.text;bp.classList.add('show');bp.style.opacity=op===1?'':op;if(bempty)bempty.style.display='none';}
+  } else {
+    pe.classList.remove('show');pe.style.opacity='';
+    if(bp){bp.classList.remove('show');bp.style.opacity='';if(bempty)bempty.style.display='';}
+  }
+}
+
+// Fading trail: track when each move completed (performance.now() timestamp)
+const moveCompletedAt=[];
+const FADE_DURATION=4000;
+const TRAIL_MIN=0.09;
+const TRAIL_MAX=0.55;
+
+function trailAlpha(moveIdx,now){
+  const t=moveCompletedAt[moveIdx];
+  if(t===null) return 0;
+  const age=now-t;
+  if(age>=FADE_DURATION) return TRAIL_MIN;
+  return TRAIL_MAX - (TRAIL_MAX-TRAIL_MIN)*(age/FADE_DURATION);
+}
+
+function drawFullFrame(mIdx,sI,sP,now){
+  now=now||performance.now();
+  drawArena();
+
+  // Previous moves fading trail
+  for(let i=0;i<mIdx;i++){
+    const alpha=trailAlpha(i,now);
+    if(alpha>0.005) MOVES[i].segs.forEach(s=>drawSeg(s,1,alpha));
+  }
+
+  // Current move
+  const mv=MOVES[mIdx];
+  const isCoeff=mv.coeff>1;
+  let pos=null,lastG='trot';
+
+  mv.segs.forEach((s,i)=>{
+    if(i<sI){drawSeg(s,1,1,mv.coeff>1?mv.coeff:0,now);pos=getSegPos(s,1);lastG=getSegGait(s,1);}
+    else if(i===sI){drawSeg(s,sP,1,mv.coeff>1?mv.coeff:0,now);pos=getSegPos(s,sP);lastG=getSegGait(s,sP);}
+  });
+
+  drawHorse(pos,lastG,mv.coeff,now);
+
+  // ── PROMPT DISPLAY — calls extracted evaluator ──────
+  const promptResult=evaluatePrompts(mv,sI,sP,now);
+  displayPrompt(promptResult);
+
+  // ── COEFFICIENT PRE-WARNING ─────────────────────────
+  // Same hold/fade treatment as regular prompts — 3s real time
+  const nextMv=MOVES[mIdx+1];
+  const coeffWarn=document.getElementById('coeff-warn');
+  const bcoeff=document.getElementById('b-coeff-warn');
+  const coeffActive=coeffWarn&&nextMv&&nextMv.coeff>1;
+  if(coeffActive){
+    const totalDur=mv.segs.reduce((s,sg)=>s+segDurMs(sg),0);
+    let elapsed=0;
+    for(let i=0;i<sI;i++) elapsed+=segDurMs(mv.segs[i]);
+    elapsed+=sP*segDurMs(mv.segs[sI]||mv.segs[mv.segs.length-1]);
+    const overall=totalDur>0?elapsed/totalDur:sP;
+    const warnText=`⭐ Next: ×${nextMv.coeff} coefficient movement`;
+    if(overall>=0.85){
+      // Trigger — start hold timer if not already running
+      if(!coeffHoldSince) coeffHoldSince=now;
+      coeffWarn.textContent=warnText;
+      coeffWarn.classList.add('show');coeffWarn.style.opacity='';
+      if(bcoeff){bcoeff.textContent=warnText;bcoeff.classList.add('show');bcoeff.style.opacity='';}
+    } else if(coeffHoldSince){
+      // Past trigger point — apply hold/fade
+      const age=now-coeffHoldSince;
+      if(age<PROMPT_MIN_MS){
+        coeffWarn.classList.add('show');coeffWarn.style.opacity='';
+        if(bcoeff){bcoeff.classList.add('show');bcoeff.style.opacity='';}
+      } else if(age<PROMPT_MIN_MS+PROMPT_FADE_MS){
+        const op=1-(age-PROMPT_MIN_MS)/PROMPT_FADE_MS;
+        coeffWarn.classList.add('show');coeffWarn.style.opacity=op;
+        if(bcoeff){bcoeff.classList.add('show');bcoeff.style.opacity=op;}
+      } else {
+        coeffWarn.classList.remove('show');coeffWarn.style.opacity='';
+        coeffHoldSince=null;
+        if(bcoeff){bcoeff.classList.remove('show');bcoeff.style.opacity='';}
+      }
+    } else {
+      coeffWarn.classList.remove('show');
+      if(bcoeff) bcoeff.classList.remove('show');
+    }
+  } else {
+    coeffWarn&&coeffWarn.classList.remove('show');
+    if(bcoeff) bcoeff.classList.remove('show');
+    coeffHoldSince=null;
+  }
+
+  // Overall progress for bar
+  const totalDur=mv.segs.reduce((s,sg)=>s+segDurMs(sg),0);
+  let elapsed=0;
+  for(let i=0;i<sI;i++) elapsed+=segDurMs(mv.segs[i]);
+  elapsed+=sP*segDurMs(mv.segs[sI]||mv.segs[mv.segs.length-1]);
+  const overall=totalDur>0?elapsed/totalDur:sP;
+  document.getElementById('pf').style.width=(overall*100)+'%';
+
+  // Sub-step indicator
+  updateSubStepUI(mIdx,sI,mv.segs.length);
+}
+
+function isPastMarker(mv,mIdx,sI,sP,marker){
+  const mx=marker[0],my=marker[1];
+  // If currently halting AT the marker, horse is at the marker — not past it
+  const curSeg=mv.segs[sI];
+  if(curSeg&&curSeg.t==='halt'){
+    const hp=curSeg.pt;
+    if(Math.abs(hp[0]-mx)<0.5&&Math.abs(hp[1]-my)<0.5) return false;
+  }
+  for(let i=0;i<mv.segs.length;i++){
+    const seg=mv.segs[i];
+    if(seg.t==='halt'||seg.t==='bezier') continue;
+    if(seg.t==='line'||seg.t==='arc'||seg.t==='grad'){
+      const pts=seg.pts||[];
+      for(let j=0;j<pts.length;j++){
+        if(Math.abs(pts[j][0]-mx)<0.1&&Math.abs(pts[j][1]-my)<0.1){
+          if(i<sI) return true;
+          if(i===sI){
+            const frac=j/(pts.length-1||1);
+            // Marker at segment start (frac≈0): don't immediately consider past
+            return sP>(frac<0.01?0.1:frac);
+          }
+          return false;
+        }
+      }
+    }
+    if(seg.t==='circle'){
+      if(i<sI) return true;
+      if(i===sI) return sP>0.99;
+      return false;
+    }
+  }
+  return false;
+}
+
+function updateSubStepUI(mIdx,sI,totalSegs){
+  const el=document.getElementById('substep');
+  if(el) el.textContent=totalSegs>1?`sub-step ${sI+1}/${totalSegs}`:'';
+}
+
+function tick(now){
+  if(!isPlaying&&segT0!==null){
+    return;
+  }
+  if(segT0===null){segT0=resumeOffset?now-segElapsedAtPause:now;resumeOffset=false;segElapsedAtPause=0;}
+  const mv=MOVES[cur];
+
+  while(segI<mv.segs.length){
+    const seg=mv.segs[segI];
+    const dur=segDurMs(seg);
+    const el=now-segT0;
+    if(el>=dur){segT0+=dur;segI++;}
+    else{
+      drawFullFrame(cur,segI,el/dur,now);
+      animFrame=requestAnimationFrame(tick);
+      return;
+    }
+  }
+
+  // Move complete — record timestamp for fading trail
+  if(moveCompletedAt[cur]===null) moveCompletedAt[cur]=now;
+  drawFullFrame(cur,mv.segs.length-1,1,now);
+
+  if(isPlaying){
+    const next=cur+1;
+    if(next<MOVES.length){
+      cur=next;segI=0;segT0=now;resumeOffset=false;segElapsedAtPause=0;
+      resetPromptState((MOVES[cur].prompts||[]).length);
+      coeffHoldSince=null;
+      updateDetail(cur);
+      animFrame=requestAnimationFrame(tick);
+    } else if(looping){
+      // Reset completion times for clean loop
+      for(let i=0;i<moveCompletedAt.length;i++) moveCompletedAt[i]=null;
+      cur=0;segI=0;segT0=now;resumeOffset=false;segElapsedAtPause=0;
+      resetPromptState((MOVES[cur].prompts||[]).length);
+      coeffHoldSince=null;
+      updateDetail(cur);
+      animFrame=requestAnimationFrame(tick);
+    } else {
+      isPlaying=false;
+      syncPlayBtn();
+    }
+  }
+}
+
+function startAnim(idx,play){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  cur=idx;segI=0;segT0=null;isPlaying=play;
+  for(let i=idx;i<MOVES.length;i++) moveCompletedAt[i]=null;
+  resetPromptState((MOVES[idx].prompts||[]).length);
+  coeffHoldSince=null;
+  updateDetail(idx);
+  animFrame=requestAnimationFrame(tick);
+}
+
+function syncPlayBtn(){document.getElementById('pb').textContent=isPlaying?'|| Pause':'> Play';}
+
+function togglePlay(){
+  if(isPlaying){
+    // IMMEDIATE pause — set flag, cancel frame
+    isPlaying=false;
+    segElapsedAtPause=segT0!==null?performance.now()-segT0:0;
+    if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+    syncPlayBtn();
+  } else {
+    if(cur>=MOVES.length-1)cur=0;
+    isPlaying=true;
+    syncPlayBtn();
+    // Resume from exact pause position
+    segT0=null;resumeOffset=true;
+    animFrame=requestAnimationFrame(tick);
+  }
+}
+
+function toggleLoop(){
+  looping=!looping;
+  const b=document.getElementById('lb');
+  b.textContent='↺ Loop: '+(looping?'On':'Off');
+  b.classList.toggle('active',looping);
+}
+
+function userNext(){
+  isPlaying=false;syncPlayBtn();
+  const mv=MOVES[cur];
+  if(segI<mv.segs.length-1){
+    // Advance to next sub-step within movement
+    segI++;segT0=null;
+    updateDetail(cur);
+    animFrame=requestAnimationFrame(tick);
+  } else if(cur<MOVES.length-1){
+    // Move to next movement
+    startAnim(cur+1,false);
+  }
+}
+
+function rewindPrompts(newSegI){
+  const prompts=MOVES[cur].prompts||[];
+  for(let pi=0;pi<prompts.length;pi++){
+    const p=prompts[pi];
+    // Clear if: pre prompt, or prompt seg is at/after the new position
+    if(p.pre||p.seg>=newSegI){
+      if(pi<promptFireTimes.length) promptFireTimes[pi]=null;
+      if(pi<promptSealed.length) promptSealed[pi]=false;
+    }
+  }
+}
+
+function userPrev(){
+  if(segI>0){
+    segI--;segT0=null;
+    rewindPrompts(segI);
+    updateDetail(cur);
+    if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+    animFrame=requestAnimationFrame(tick);
+  } else if(cur>0){
+    const prevMv=MOVES[cur-1];
+    startAnim(cur-1,isPlaying);
+    segI=prevMv.segs.length-1;
+    segT0=null;
+  }
+}
+
+function resetToStart(){isPlaying=false;syncPlayBtn();startAnim(0,false);}
+function rewindToStartOfMove(){
+  if(segI>0){
+    segI=0;segT0=null;
+    rewindPrompts(0);
+    updateDetail(cur);
+    if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+    animFrame=requestAnimationFrame(tick);
+  } else if(cur>0){
+    cur--;segI=0;segT0=null;
+    rewindPrompts(0);
+    updateDetail(cur);
+    if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+    animFrame=requestAnimationFrame(tick);
+  }
+}
+function skipToEndOfMove(){
+  if(cur<MOVES.length-1){
+    if(moveCompletedAt[cur]===null) moveCompletedAt[cur]=performance.now();
+    cur++;segI=0;segT0=null;
+    updateDetail(cur);
+    if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+    animFrame=requestAnimationFrame(tick);
+  }
+}
+function skipToEndOfSeg(){
+  const mv=MOVES[cur];
+  if(segI<mv.segs.length-1){
+    segI++;
+  } else if(cur<MOVES.length-1){
+    cur++;segI=0;updateDetail(cur);
+    if(moveCompletedAt[cur-1]===null) moveCompletedAt[cur-1]=performance.now();
+  } else {
+    return;
+  }
+  segT0=null;
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  animFrame=requestAnimationFrame(tick);
+}
+
+// ═══════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════
+function updateDetail(i){
+  const mv=MOVES[i];
+  // Side panel
+  document.getElementById('dn').textContent=mv.n||'·';
+  document.getElementById('dl').textContent=mv.label;
+  document.getElementById('draw').textContent=mv.raw||'—';
+  const dd=document.getElementById('ddir');
+  if(mv.dir){dd.textContent='📋 '+mv.dir;dd.style.display='';}
+  else dd.style.display='none';
+  const dc=document.getElementById('dc');
+  if(mv.coeff>1){dc.textContent='×'+mv.coeff+' coefficient';dc.style.display='';}
+  else dc.style.display='none';
+  const gaits=[];
+  mv.segs.forEach(s=>{
+    if(s.t==='grad'){if(!gaits.includes(s.g1))gaits.push(s.g1);if(!gaits.includes(s.g2))gaits.push(s.g2);}
+    else if(s.g&&s.g!=='none'&&!gaits.includes(s.g))gaits.push(s.g);
+    else if(s.t==='halt'&&!gaits.includes('halt'))gaits.push('halt');
+  });
+  const pillsHtml=gaits.map(g=>`<span class="pill ${g}">${GL[g]||g}</span>`).join('');
+  document.getElementById('dg').innerHTML=pillsHtml;
+  document.getElementById('pt').textContent=`${mv.n||'·'} / ${MOVES[MOVES.length-1].n||MOVES.length-1}`;
+  document.querySelectorAll('.mb').forEach((b,x)=>b.classList.toggle('active',x===i));
+  document.querySelectorAll('.mb')[i]?.scrollIntoView({block:'nearest'});
+  // Bubble
+  document.getElementById('b-dn').textContent=mv.n||'·';
+  document.getElementById('b-dl').textContent=mv.label;
+  const bdc=document.getElementById('b-dc');
+  if(mv.coeff>1){bdc.textContent='×'+mv.coeff+' coefficient';bdc.style.display='';}
+  else bdc.style.display='none';
+  document.getElementById('b-dg').innerHTML=pillsHtml;
+  const bdir=document.getElementById('b-ddir');
+  if(mv.dir){bdir.textContent=mv.dir;bdir.style.display='';}
+  else bdir.style.display='none';
+}
+
+function buildList(){
+  const ml=document.getElementById('ml');ml.innerHTML='';
+  MOVES.forEach((mv,i)=>{
+    const b=document.createElement('button');
+    b.className='mb'+(i===0?' active':'');
+    b.innerHTML=`<span class="mn">${mv.n||'·'}</span><span style="flex:1;line-height:1.4;">${mv.label}</span><span class="mbr">${mv.coeff>1?`<span class="mbcoeff">×${mv.coeff}</span>`:''}</span>`;
+    b.onclick=()=>{startAnim(i,isPlaying);};
+    ml.appendChild(b);
+  });
+}
+
+function init(){
+  MOVES=getActiveMoves();
+  moveCompletedAt.length=0;
+  for(let i=0;i<MOVES.length;i++) moveCompletedAt.push(null);
+  updateTimedBtn();
+  sizeCanvas();buildList();recalcTotalM();
+  snapSpeed(800);
+  positionBubble();
+  makeDraggable(document.getElementById('bubble'),document.getElementById('bubble-handle'));
+  makeDraggable(document.getElementById('float-ctrl'),document.getElementById('ctrl-handle'));
+  startAnim(0,false);
+}
+
+// ── SCRUBBABLE PROGRESS BAR ─────────────────────────
+function scrubToFraction(frac){
+  frac=Math.max(0,Math.min(1,frac));
+  const target=Math.round(frac*(MOVES.length-1));
+  isPlaying=false;syncPlayBtn();
+  startAnim(target,false);
+}
+function progBarFrac(e,el){
+  const r=el.getBoundingClientRect();
+  return (e.clientX-r.left)/r.width;
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  const pb=document.getElementById('progbg');
+  if(!pb) return;
+  let dragging=false;
+  pb.addEventListener('mousedown',e=>{dragging=true;scrubToFraction(progBarFrac(e,pb));e.preventDefault();});
+  window.addEventListener('mousemove',e=>{if(dragging)scrubToFraction(progBarFrac(e,pb));});
+  window.addEventListener('mouseup',()=>{dragging=false;});
+  pb.addEventListener('touchstart',e=>{dragging=true;scrubToFraction(progBarFrac(e.touches[0],pb));},{passive:true});
+  window.addEventListener('touchmove',e=>{if(dragging)scrubToFraction(progBarFrac(e.touches[0],pb));},{passive:true});
+  window.addEventListener('touchend',()=>{dragging=false;});
+});
+
+window.addEventListener('resize',()=>{
+  sizeCanvas();positionBubble();
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  segT0=null;startAnim(cur,isPlaying);
+});
+
+init();
+</script>
+</body>
+</html>

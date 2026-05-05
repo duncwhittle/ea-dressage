@@ -1,0 +1,10 @@
+Add four new transport buttons to the controls section. The existing button row has ? Prev, ? Play, and Next ?. Replace the entire controls section with this new layout:
+Row 1: ? Reset · ? Movement · ? Sub-step · ?? Play/Pause · ? Sub-step · ? Movement
+Row 2: ? Loop (existing, unchanged)
+Keep the existing userPrev and userNext functions — they already handle sub-step navigation correctly and map to ? and ?.
+Add these new functions:
+function resetToStart(){isPlaying=false;syncPlayBtn();startAnim(0,false);} — for ?
+function skipToEndOfSeg(){isPlaying=false;syncPlayBtn();const mv=MOVES[cur];drawFullFrame(cur,segI,1,performance.now());segT0=null;} — for ? (sub-step)
+function skipToEndOfMove(){isPlaying=false;syncPlayBtn();const mv=MOVES[cur];segI=mv.segs.length-1;drawFullFrame(cur,segI,1,performance.now());segT0=null;} — for ?
+function rewindToStartOfMove(){isPlaying=false;syncPlayBtn();startAnim(cur,false);} — for ?
+The six buttons in row 1 should be equal width using flex:1. Keep all existing IDs and classes intact, especially id="pb" on the Play/Pause button.

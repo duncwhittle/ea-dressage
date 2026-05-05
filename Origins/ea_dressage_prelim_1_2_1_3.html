@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EA Dressage — Preliminary 1.2 & 1.3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f3ee; color: #222; padding: 16px; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 14px; color: #333; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 10px; font-size: 14px; font-weight: 500; border-radius: 10px; border: 1.5px solid #ddd; background: #fff; cursor: pointer; color: #888; text-align: center; transition: all 0.15s; }
+  .tab.active { background: #e8f0fe; border-color: #4a7ee0; color: #2a55c0; }
+  .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  canvas { border-radius: 12px; border: 1px solid #ddd; background: #fafaf8; flex: 0 0 auto; }
+  .panel { flex: 1; min-width: 220px; }
+  .dcard { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid #eee; min-height: 90px; }
+  .dletter { font-size: 17px; font-weight: 600; color: #222; margin-bottom: 4px; }
+  .ddesc { font-size: 13px; color: #444; line-height: 1.55; margin-bottom: 7px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .trot { background: #dbeafe; color: #1e40af; }
+  .canter { background: #dcfce7; color: #166534; }
+  .walk { background: #fef3c7; color: #92400e; }
+  .halt { background: #fce7f3; color: #9d174d; }
+  .stretch { background: #ede9fe; color: #4c1d95; }
+  .ctrls { display: flex; gap: 8px; margin-bottom: 10px; }
+  .cb { flex: 1; padding: 9px; font-size: 13px; border-radius: 9px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #333; font-weight: 500; transition: background 0.1s; }
+  .cb:hover { background: #f0f0f0; }
+  .cb#pb { background: #4a7ee0; color: #fff; border-color: #4a7ee0; }
+  .cb#pb:hover { background: #3a6ed0; }
+  .prog { font-size: 12px; color: #888; text-align: center; margin-bottom: 10px; }
+  .mlist { overflow-y: auto; max-height: 280px; display: flex; flex-direction: column; gap: 3px; }
+  .mb { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 7px 10px; border-radius: 8px; border: 1px solid #eee; background: #fff; cursor: pointer; font-size: 12.5px; color: #333; transition: background 0.1s; }
+  .mb:hover { background: #f5f5f5; }
+  .mb.active { background: #e8f0fe; border-color: #4a7ee0; color: #2a55c0; }
+  .mn { font-size: 11px; font-weight: 600; min-width: 18px; color: #aaa; }
+  .mb.active .mn { color: #4a7ee0; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+  .legdot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<h1>EA Dressage — Preliminary 1.2 & 1.3</h1>
+<div class="tabs">
+  <button class="tab active" id="t12" onclick="sw('12')">Preliminary 1.2</button>
+  <button class="tab" id="t13" onclick="sw('13')">Preliminary 1.3</button>
+</div>
+<div class="legend">
+  <div class="leg"><div class="legdot" style="background:#378ADD"></div>Working trot</div>
+  <div class="leg"><div class="legdot" style="background:#639922"></div>Working canter</div>
+  <div class="leg"><div class="legdot" style="background:#BA7517"></div>Walk</div>
+  <div class="leg"><div class="legdot" style="background:#D4537E"></div>Halt</div>
+  <div class="leg"><div class="legdot" style="background:#7F77DD"></div>Stretch trot</div>
+</div>
+<div class="wrap">
+  <canvas id="cv" width="260" height="390"></canvas>
+  <div class="panel">
+    <div class="dcard">
+      <div class="dletter" id="dl"></div>
+      <div class="ddesc" id="dd"></div>
+      <div id="dg"></div>
+    </div>
+    <div class="ctrls">
+      <button class="cb" onclick="prev()">← Prev</button>
+      <button class="cb" id="pb" onclick="pp()">▶ Play</button>
+      <button class="cb" onclick="next()">Next →</button>
+    </div>
+    <div class="prog" id="pg"></div>
+    <div class="mlist" id="ml"></div>
+  </div>
+</div>
+
+<script>
+const W=260,H=390,P=28,AW=W-P*2,AH=H-P*2;
+const L={
+  A:[W/2,H-P], B:[P,H/2], C:[W/2,P],
+  E:[W-P,H/2], F:[P,H-P-AH*.25],
+  H:[W-P,P+AH*.25], K:[P,P+AH*.25],
+  M:[W-P,H-P-AH*.25], X:[W/2,H/2]
+};
+const GC={trot:'#378ADD',canter:'#639922',walk:'#BA7517',halt:'#D4537E',stretch:'#7F77DD'};
+const GL={trot:'Working trot',canter:'Working canter',walk:'Walk',halt:'Halt / Salute',stretch:'Stretch trot'};
+const GS={trot:'trot',canter:'canter',walk:'walk',halt:'halt',stretch:'stretch'};
+
+function lp(a,b,t){return a+(b-a)*t;}
+
+const T={
+'12':[
+  {n:1,l:'A / X',d:'Enter in working trot. Halt, salute. Proceed in working trot.',g:'halt',pts:[L.A,L.X],sh:'ln'},
+  {n:2,l:'C → B (circle right 20m) → K',d:'Track right. 20m circle right at B in working trot.',g:'trot',pts:[L.C,L.B],sh:'crB'},
+  {n:3,l:'K–X–M / M–C',d:'Change rein across diagonal K to M. Working trot to C.',g:'trot',pts:[L.K,L.X,L.M,L.C],sh:'ln'},
+  {n:4,l:'Between C & H → H–E',d:'Working canter left lead between C & H. Continue H to E.',g:'canter',pts:[L.C,L.H,L.E],sh:'ln'},
+  {n:5,l:'E — 20m circle left',d:'20m circle left in working canter.',g:'canter',pts:[L.E],sh:'clE'},
+  {n:6,l:'Between E & K → K–A',d:'Transition to working trot between E & K. Continue to A.',g:'trot',pts:[L.E,L.K,L.A],sh:'ln'},
+  {n:7,l:'A — 20m circle left (stretch)',d:'20m circle left in rising trot, allowing horse to stretch forward and downward. Shorten reins before A. Working trot A–F.',g:'stretch',pts:[L.A],sh:'clA'},
+  {n:8,l:'F → E (medium walk)',d:'Transition to medium walk at F. Change rein F to E in medium walk.',g:'walk',pts:[L.F,L.E],sh:'ln'},
+  {n:9,l:'E–M (free walk) / M–C (medium walk)',d:'Change rein E to M in free walk on a long rein. Medium walk M to C.',g:'walk',pts:[L.E,L.M,L.C],sh:'ln'},
+  {n:10,l:'C → E (working trot)',d:'Transition to working trot at C. Working trot C to E.',g:'trot',pts:[L.C,L.E],sh:'ln'},
+  {n:11,l:'E — 20m circle left',d:'20m circle left at E in working trot.',g:'trot',pts:[L.E],sh:'clE'},
+  {n:12,l:'F–X–H / H–C',d:'Change rein across diagonal F to H. Working trot to C.',g:'trot',pts:[L.F,L.X,L.H,L.C],sh:'ln'},
+  {n:13,l:'Between C & M → M–B',d:'Working canter right lead between C & M. Continue M to B.',g:'canter',pts:[L.C,L.M,L.B],sh:'ln'},
+  {n:14,l:'B — 20m circle right',d:'20m circle right in working canter.',g:'canter',pts:[L.B],sh:'crB'},
+  {n:15,l:'Between B & F → F–A',d:'Transition to working trot between B & F. Continue F to A.',g:'trot',pts:[L.B,L.F,L.A],sh:'ln'},
+  {n:16,l:'A / X — Halt, salute',d:'Down centreline. Halt, salute. Leave arena at A in walk on long rein.',g:'halt',pts:[L.A,L.X],sh:'ln'},
+],
+'13':[
+  {n:1,l:'A / X',d:'Enter in working trot. Halt, salute. Proceed in working trot.',g:'halt',pts:[L.A,L.X],sh:'ln'},
+  {n:2,l:'C / H–X–K (one loop)',d:'Track left. One loop — shallow serpentine from H to K, deviating to centre at X. Changes of bend.',g:'trot',pts:[L.C,L.H,[W/2,H/2+30],L.K],sh:'ln'},
+  {n:3,l:'Between A & F → F–B',d:'Working canter left lead between A & F. Continue F to B.',g:'canter',pts:[L.A,L.F,L.B],sh:'ln'},
+  {n:4,l:'B — 20m circle left / B–M–C',d:'20m circle left at B in working canter. Continue B–M–C.',g:'canter',pts:[L.B],sh:'clB'},
+  {n:5,l:'H–X–F / transition at X',d:'Change rein diagonal H to F. Transition to working trot at X.',g:'trot',pts:[L.H,L.X,L.F],sh:'ln'},
+  {n:6,l:'A → K (medium walk)',d:'Transition to medium walk at A. Medium walk A to K.',g:'walk',pts:[L.A,L.K],sh:'ln'},
+  {n:7,l:'K–X–H (free walk) / H–C (medium walk)',d:'Free walk on long rein K to H via X. Medium walk H to C.',g:'walk',pts:[L.K,L.X,L.H,L.C],sh:'ln'},
+  {n:8,l:'C / M–X–F (one loop)',d:'Working trot at C. One loop — shallow serpentine from M to F, deviating to centre at X.',g:'trot',pts:[L.C,L.M,[W/2,H/2-30],L.F],sh:'ln'},
+  {n:9,l:'Between A & K → K–E',d:'Working canter right lead between A & K. Continue K to E.',g:'canter',pts:[L.A,L.K,L.E],sh:'ln'},
+  {n:10,l:'E — 20m circle right / E–H–C',d:'20m circle right at E in working canter. Continue E–H–C.',g:'canter',pts:[L.E],sh:'crE'},
+  {n:11,l:'C → B (working trot)',d:'Transition to working trot at C. Working trot C to B.',g:'trot',pts:[L.C,L.B],sh:'ln'},
+  {n:12,l:'B — 20m circle right (stretch)',d:'20m circle right at B in rising trot, allowing horse to stretch forward and downward. Shorten reins before B. Working trot B–A.',g:'stretch',pts:[L.B],sh:'crB'},
+  {n:13,l:'A / X — Halt, salute',d:'Down centreline. Halt, salute. Leave arena at A in walk on long rein.',g:'halt',pts:[L.A,L.X],sh:'ln'},
+]};
+
+function circ(sh){
+  const r=AW/4;
+  const m={
+    clA:{cx:L.A[0]+r,cy:L.A[1],r,s:Math.PI,cc:true},
+    crA:{cx:L.A[0]-r,cy:L.A[1],r,s:0,cc:false},
+    clB:{cx:L.B[0],cy:L.B[1]-r,r,s:Math.PI/2,cc:true},
+    crB:{cx:L.B[0],cy:L.B[1]-r,r,s:Math.PI/2,cc:false},
+    clE:{cx:L.E[0],cy:L.E[1]-r,r,s:-Math.PI/2,cc:true},
+    crE:{cx:L.E[0],cy:L.E[1]-r,r,s:-Math.PI/2,cc:false},
+    clC:{cx:L.C[0]+r,cy:L.C[1],r,s:Math.PI,cc:true},
+    crC:{cx:L.C[0]-r,cy:L.C[1],r,s:0,cc:false},
+  };
+  return m[sh]||null;
+}
+
+function dpath(ctx,mv,pr){
+  if(mv.sh==='ln'){
+    const pts=mv.pts,seg=pts.length-1,dr=pr*seg;
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<=seg;i++){
+      const t=Math.min(1,dr-(i-1));if(t<=0)break;
+      ctx.lineTo(lp(pts[i-1][0],pts[i][0],t),lp(pts[i-1][1],pts[i][1],t));
+    }
+    ctx.stroke();
+  } else {
+    const c=circ(mv.sh);if(!c)return;
+    const end=c.s+(c.cc?-1:1)*Math.PI*2*pr;
+    ctx.beginPath();ctx.arc(c.cx,c.cy,c.r,c.s,end,c.cc);ctx.stroke();
+  }
+}
+
+function gpos(mv,pr){
+  if(mv.sh==='ln'){
+    const pts=mv.pts,seg=pts.length-1,dr=pr*seg,s=Math.min(seg-1,Math.floor(dr)),t=dr-s;
+    return[lp(pts[s][0],pts[s+1][0],t),lp(pts[s][1],pts[s+1][1],t)];
+  } else {
+    const c=circ(mv.sh);if(!c)return null;
+    const a=c.s+(c.cc?-1:1)*Math.PI*2*pr;
+    return[c.cx+Math.cos(a)*c.r,c.cy+Math.sin(a)*c.r];
+  }
+}
+
+let at='12',cur=0,apr=0,af=null,pi=null;
+
+function draw(step,progress){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+  // Arena border
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1.5;ctx.strokeRect(P,P,AW,AH);
+  // Centre lines
+  ctx.setLineDash([4,4]);ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W/2,P);ctx.lineTo(W/2,H-P);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(P,H/2);ctx.lineTo(W-P,H/2);ctx.stroke();
+  ctx.setLineDash([]);
+  // Letter markers
+  ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ['A','B','C','E','F','H','K','M'].forEach(ll=>{
+    const[lx,ly]=L[ll];
+    const ox=lx===P?-12:lx===W-P?12:0;
+    const oy=ly===P?-12:ly===H-P?12:0;
+    ctx.fillStyle='#999';ctx.fillText(ll,lx+ox,ly+oy);
+    ctx.fillStyle='#ccc';ctx.beginPath();ctx.arc(lx,ly,3,0,Math.PI*2);ctx.fill();
+  });
+  ctx.font='9px sans-serif';ctx.fillStyle='#ccc';ctx.fillText('X',W/2+8,H/2-7);
+  // Previous movements (faded)
+  const mvs=T[at];
+  for(let i=0;i<step;i++){
+    ctx.strokeStyle=GC[mvs[i].g];ctx.lineWidth=2;ctx.globalAlpha=0.15;
+    dpath(ctx,mvs[i],1);
+  }
+  ctx.globalAlpha=1;
+  // Current movement
+  const mv=mvs[step];
+  ctx.strokeStyle=GC[mv.g];ctx.lineWidth=3;
+  ctx.shadowColor=GC[mv.g];ctx.shadowBlur=4;
+  dpath(ctx,mv,progress);
+  ctx.shadowBlur=0;
+  // Horse dot
+  const pos=gpos(mv,progress);
+  if(pos){
+    ctx.fillStyle='#fff';ctx.shadowColor=GC[mv.g];ctx.shadowBlur=10;
+    ctx.beginPath();ctx.arc(pos[0],pos[1],6,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=GC[mv.g];
+    ctx.beginPath();ctx.arc(pos[0],pos[1],4,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(pos[0],pos[1],6,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+
+function upd(i){
+  const mv=T[at][i];
+  document.getElementById('dl').textContent=mv.l;
+  document.getElementById('dd').textContent=mv.d;
+  document.getElementById('dg').innerHTML=`<span class="pill ${GS[mv.g]}">${GL[mv.g]}</span>`;
+  document.getElementById('pg').textContent=`Movement ${i+1} of ${T[at].length}`;
+  document.querySelectorAll('.mb').forEach((b,x)=>b.classList.toggle('active',x===i));
+  const ab=document.querySelectorAll('.mb')[i];if(ab)ab.scrollIntoView({block:'nearest'});
+}
+
+function anim(step){
+  cur=step;apr=0;if(af)cancelAnimationFrame(af);
+  const dur=1200,st=performance.now();
+  function tk(now){
+    apr=Math.min(1,(now-st)/dur);
+    draw(cur,apr);
+    if(apr<1)af=requestAnimationFrame(tk);
+  }
+  af=requestAnimationFrame(tk);upd(step);
+}
+
+function next(){if(cur<T[at].length-1)anim(cur+1);}
+function prev(){if(cur>0)anim(cur-1);}
+function pp(){
+  const b=document.getElementById('pb');
+  if(pi){clearInterval(pi);pi=null;b.textContent='▶ Play';}
+  else{
+    b.textContent='⏸ Pause';
+    pi=setInterval(()=>{
+      if(cur<T[at].length-1)anim(cur+1);
+      else{clearInterval(pi);pi=null;b.textContent='▶ Play';}
+    },2200);
+  }
+}
+
+function bl(){
+  const ml=document.getElementById('ml');ml.innerHTML='';
+  const gs={trot:'Trot',canter:'Canter',walk:'Walk',halt:'Halt',stretch:'Stretch'};
+  T[at].forEach((mv,i)=>{
+    const b=document.createElement('button');
+    b.className='mb'+(i===0?' active':'');
+    b.innerHTML=`<span class="mn">${mv.n}</span><span style="flex:1">${mv.l} &nbsp;<span class="pill ${GS[mv.g]}" style="font-size:10px;padding:1px 7px;">${gs[mv.g]}</span></span>`;
+    b.onclick=()=>anim(i);
+    ml.appendChild(b);
+  });
+}
+
+function sw(id){
+  if(pi){clearInterval(pi);pi=null;document.getElementById('pb').textContent='▶ Play';}
+  at=id;cur=0;apr=0;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('t'+id).classList.add('active');
+  bl();draw(0,1);upd(0);
+}
+
+sw('12');
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Old HTML versions — keep only current
+ea_dressage_v[0-9]*.html
+!ea_dressage_v13.html
+index.html.html
+
+# Binary / document files
+*.docx
+*.zip
+*.pdf
+
+# Old dated project brief (superseded by EA_DRESSAGE_PROJECT.md)
+EA_DRESSAGE_PROJECT 260504.md
