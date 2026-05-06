@@ -5,7 +5,7 @@
 **Purpose:** Paste this into the first message of any new session alongside the HTML file.
 
 ---
-
+raw: field — stub — everywhere. Originally optional (rein-change is geometric), now required by the coach/observer/judge view planned in Future Modes.
 ## What This Is
 
 An animated dressage test viewer for Equestrian Australia preliminary tests. A horse cursor travels a geometrically accurate path around a 60×20m (or 40×20m) arena. Three tests: Prelim 1.2, Prelim 1.3, Eventing Test B (EVB). Two purposes: (1) visual learning tool, (2) coaching prompt system that calls out instructions ahead of each movement.
@@ -171,6 +171,19 @@ Run `node validate-events.js {1.2|1.3|EVB|all}` for Layer 3 event stream per tes
 Coeff×2: 1.2→Mv3,4,8,9,12,13 · 1.3→Mv2,6,7,8,12 · EVB→none
 
 ---
+
+## Future Modes (architecturally compatible — non-blocking
+
+Two future use modes have been considered. Both are compatible with the current architecture; neither requires structural change to Layers 1-5.
+GPS-driven live coaching mode. Rider mounts horse, audio prompts fire as they ride the test in a real arena. Rider's GPS position drives prompt timing instead of the animator's cursor.
+Architectural fit: Layers 1-4 are pure functions over test data; commands are tagged (mvI, atSeg, atT) and don't care whether the cursor is animated or live. Layer 5's auto-distance enables any position source to drive firing. New work needed: (a) calibration step where rider marks arena corners with GPS, computing a transform to canonical 60×20m coordinates; (b) position translator that takes live GPS, projects to nearest point on test path, returns (segI, t); (c) edge-case handling for GPS jitter, off-path positions, audio latency / pre-emptive firing based on velocity.
+Constraint to preserve: keep Layers 1-5 pure and position-source-agnostic. The cursor position should be one input among possibly many, not a privileged source.
+Coach/observer/judge view. Click-through display of the test for coaches calling out tests live, judges tracking, or observers studying. Three-card layout: the SELECTED movement is most prominent in the centre of view; the PRECEDING and SUCCEEDING movements are visible but dimmed alongside, to assist with anticipation (what's coming) and review (what just happened). Each card shows movement number, coefficient flag, label, desc, raw EA test sheet text, judge's directive, and generated prompts (filtered to L2 by default with user override).
+Architectural fit: zero structural change. New view component over existing movement data.
+Blocking dependency: raw field must be populated with verbatim EA test sheet text. Currently stubbed — for all movements. The coach/judge view is the use case that promotes raw population from "future convenience" to "required for this feature."
+
+---
+
 
 ## Known Issues / Next Priorities
 
