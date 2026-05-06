@@ -41,8 +41,9 @@ function fmtEvent(ev) {
       const coeff = ev.nextMvCoeff > 1 ? ` ×${ev.nextMvCoeff}` : '';
       const ctx   = ev.nextCtx
         ? `  ctx:${ev.nextCtx.type}` +
-          (ev.nextCtx.atMarker  ? `@${ev.nextCtx.atMarker}`                     : '') +
-          (ev.nextCtx.fromGait  ? ` ${ev.nextCtx.fromGait}→${ev.nextCtx.toGait}` : '')
+          (ev.nextCtx.atMarker   ? `@${ev.nextCtx.atMarker}`                      : '') +
+          (ev.nextCtx.fromGait   ? ` ${ev.nextCtx.fromGait}→${ev.nextCtx.toGait}` : '') +
+          (ev.nextCtx.fromMarker ? ` [${ev.nextCtx.fromMarker}→${ev.nextCtx.toMarker}]` : '')
         : '  ctx:none';
       return `${base}  →Mv${ev.nextMvN}${coeff}: ${ev.nextMvLabel.slice(0, 38)}${ctx}`;
     }

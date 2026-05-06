@@ -459,11 +459,20 @@ function segStartMarker(seg) {
 let MARKERS_REF = null;
 function setMarkers(markers) { MARKERS_REF = markers; }
 
+// Internal path-routing helpers that must never surface as rider-facing names.
+// Compass sub-points collapse to their parent letter; corner waypoints → null.
+const _MARKER_REMAP = {
+  AE: 'A', AW: 'A',
+  CS: 'C', CE: 'C', CW_: 'C',
+  BL: null, BR: null, TL: null, TR: null,
+  A0: null, START: null,
+};
+
 function ptToMarker(pt) {
   if (!MARKERS_REF || !pt) return null;
   for (const [name, coord] of Object.entries(MARKERS_REF)) {
     if (Math.abs(coord[0] - pt[0]) < 0.5 && Math.abs(coord[1] - pt[1]) < 0.5) {
-      return name;
+      return name in _MARKER_REMAP ? _MARKER_REMAP[name] : name;
     }
   }
   return null;
@@ -562,9 +571,19 @@ function segPhase(si, mv, def) {
 // Pre-resolve the first significant coaching context of movement nextMvI
 // so that mv-preview events carry enough data for Layer 4 templating
 // without re-traversal.
-function resolveNextMvCtx(testMoves, reinTrace, nextMvI) {
+function resolveNextMvCtx(testMoves, reinTrace, nextMvI, testDefs) {
   if (nextMvI >= testMoves.length) return null;
-  const mv = testMoves[nextMvI];
+  const mv  = testMoves[nextMvI];
+  const def = testDefs ? testDefs[nextMvI] : null;
+
+  // Build segI → step map so grad segments get coaching-zone markers
+  // (step.between) rather than raw segment endpoints.
+  const segToStep = {};
+  if (def) {
+    for (const entry of buildStepSegMap(def)) {
+      for (let k = 0; k < entry.segCount; k++) segToStep[entry.segStart + k] = entry;
+    }
+  }
 
   const reBySegI = {};
   for (const row of reinTrace) {
@@ -579,13 +598,25 @@ function resolveNextMvCtx(testMoves, reinTrace, nextMvI) {
 
     for (const ev of (reBySegI[si] || [])) {
       if (ev.type === 'rein-change') {
+        // Movements with multiple rein-changes (loops = 2 soft; K→X→H = 2 hard)
+        // cannot be summarised by naming only the first. Return null so the
+        // preview falls back to nextMvLabel, which names the whole figure.
+        const totalChanges = Object.values(reBySegI).flat()
+          .filter(e => e.type === 'rein-change').length;
+        if (totalChanges > 1) return null;
         return { type:'rein-change', from:ev.from, to:ev.to,
                  softness:ev.softness, atMarker:ev.atMarker };
       }
     }
     if (seg.t === 'grad' && seg.g1 !== seg.g2 && seg.g1 !== 'none') {
+      const entry      = segToStep[si];
+      const step       = entry ? entry.step : null;
+      const fromMarker = (step && step.between) ? step.between[0]
+                       : ptToMarker(seg.pts[0]);
+      const toMarker   = (step && step.between) ? step.between[1]
+                       : ptToMarker(seg.pts[seg.pts.length - 1]);
       return { type:'gait-transition', fromGait:seg.g1, toGait:seg.g2,
-               style:'between' };
+               style:'between', fromMarker, toMarker };
     }
     if (seg.t === 'circle') {
       return { type:'circle-entry', atMarker:circleAtMarker(seg),
@@ -706,7 +737,7 @@ function generateEvents(testMoves, reinTrace, testDefs) {
       nextMvN:   nextMv.n,
       nextMvLabel: nextMv.label,
       nextMvCoeff: nextMv.coeff,
-      nextCtx: resolveNextMvCtx(testMoves, reinTrace, mvI + 1) });
+      nextCtx: resolveNextMvCtx(testMoves, reinTrace, mvI + 1, testDefs) });
 
     if (nextMv.coeff > 1) {
       events.push({ type:'coeff-banner', mvI, atSeg:lastSeg, atT:1.0,
@@ -716,6 +747,260 @@ function generateEvents(testMoves, reinTrace, testDefs) {
   }
 
   return events;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LAYER 4a — COMMAND COMPILER: events → Command[]
+//
+// Consumes the Layer 3 event stream and emits a flat Command[].
+// Each Command is self-contained — Layer 4b needs nothing else.
+//
+// COMMAND SCHEMA — common fields on every command:
+//   action       string        — command type (see below)
+//   mvI          number        — movement index
+//   atSeg        number        — segment index within mvI
+//   atT          number        — 0=start · 1=end · 0<t<1=mid
+//   dist         number        — metres before end of atSeg (Layer 5 fills; stub 0)
+//   visibleUpTo  1|2|3         — highest level that renders this command
+//   phase        'test'|'post-test'  — post-test → visibleUpTo capped at 1
+//
+// Action-specific fields:
+//   change-rein    : from, to, softness, marker, loopPhase?
+//   gait-transition: fromGait, toGait, style, marker?, fromMarker?, toMarker?
+//   circle         : marker, hand, diameter, gait, sweep?, endMarker?
+//   shorten-reins  : marker
+//   halt           : marker
+//   preview        : nextMvN, nextMvLabel, nextMvCoeff, nextCtx
+//   coeff          : nextMvCoeff   (UI signal — renderCommand returns null)
+// ═══════════════════════════════════════════════════════════════
+
+const GAIT_LABEL = {
+  trot:         'Working trot',
+  canter:       'Working canter',
+  walk:         'Medium walk',
+  freewalk:     'Free walk on long rein',
+  stretch_trot: 'Stretch trot (rising)',
+};
+
+function _capPhase(visibleUpTo, phase) {
+  return phase === 'post-test' ? Math.min(visibleUpTo, 1) : visibleUpTo;
+}
+
+// End marker of a partial-sweep circle (half circles in EVB).
+function halfCircleEndMarker(seg) {
+  if ((seg.sweep || 360) >= 360) return null;
+  const endAngle = (seg.startDeg + (seg.ccw ? seg.sweep : -seg.sweep)) * Math.PI / 180;
+  return ptToMarker([seg.cx + seg.r * Math.cos(endAngle),
+                     seg.cy + seg.r * Math.sin(endAngle)]);
+}
+
+function generateCommands(testMoves, events) {
+  const commands = [];
+
+  for (const ev of events) {
+    const mv = testMoves[ev.mvI];
+
+    switch (ev.type) {
+
+      case 'rein-change': {
+        const cmd = {
+          action: 'change-rein',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: ev.atT, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(2, ev.phase),
+          from: ev.from, to: ev.to, softness: ev.softness,
+          marker: ev.atMarker || null,
+        };
+        if (ev.softness === 'soft')
+          cmd.loopPhase = ev.atT <= 0.5 ? 'first' : 'second';
+        commands.push(cmd);
+        break;
+      }
+
+      case 'gait-transition': {
+        if (ev.toGait === 'halt') break;  // halt command covers trot→halt
+        commands.push({
+          action: 'gait-transition',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: ev.atT, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(2, ev.phase),
+          fromGait: ev.fromGait, toGait: ev.toGait, style: ev.style,
+          marker:     ev.style === 'at'      ? (ev.atMarker   || null) : null,
+          fromMarker: ev.style === 'between' ? (ev.fromMarker || null) : null,
+          toMarker:   ev.style === 'between' ? (ev.toMarker   || null) : null,
+        });
+        break;
+      }
+
+      case 'circle-entry': {
+        const seg       = mv.segs[ev.atSeg];
+        const sweep     = seg.sweep || 360;
+        const isStretch = seg.g === 'stretch';
+
+        const circCmd = {
+          action: 'circle',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: 0, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(3, ev.phase),
+          marker: ev.atMarker,
+          hand: ev.hand,
+          diameter: 20,
+          gait: isStretch ? 'stretch_trot' : seg.g,
+        };
+        if (sweep < 360) {
+          circCmd.sweep     = sweep;
+          circCmd.endMarker = halfCircleEndMarker(seg);
+        }
+        commands.push(circCmd);
+
+        // Stretch circles emit a second command for the shorten-reins cue.
+        // Fires at end of the same segment (atT:1.0) — L1 only.
+        if (isStretch) {
+          commands.push({
+            action: 'shorten-reins',
+            mvI: ev.mvI, atSeg: ev.atSeg, atT: 1.0, dist: 0,
+            phase: ev.phase,
+            visibleUpTo: _capPhase(1, ev.phase),
+            marker: ev.atMarker,
+          });
+        }
+        break;
+      }
+
+      case 'halt': {
+        commands.push({
+          action: 'halt',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: 0, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(3, ev.phase),
+          marker: ev.atMarker || 'X',
+        });
+        break;
+      }
+
+      case 'mv-preview': {
+        commands.push({
+          action: 'preview',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: 1.0, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(3, ev.phase),
+          nextMvN:     ev.nextMvN,
+          nextMvLabel: ev.nextMvLabel,
+          nextMvCoeff: ev.nextMvCoeff,
+          nextCtx:     ev.nextCtx,
+        });
+        break;
+      }
+
+      case 'coeff-banner': {
+        commands.push({
+          action: 'coeff',
+          mvI: ev.mvI, atSeg: ev.atSeg, atT: 1.0, dist: 0,
+          phase: ev.phase,
+          visibleUpTo: _capPhase(3, ev.phase),
+          nextMvCoeff: ev.nextMvCoeff,
+        });
+        break;
+      }
+    }
+  }
+
+  return commands;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LAYER 4b — RENDERER: Command × level → string|null
+//
+// Level semantics:
+//   1 = beginner — every waypoint + scaffolding
+//   2 = coach    — EA test sheet phrasing, no scaffolding
+//   3 = advanced — circles, halt, preview only
+//   4 = silent   — nothing (caller short-circuits before here)
+//
+// Returns null for: level >= 4, level > visibleUpTo,
+// post-test at level > 1, or action === 'coeff' (UI signal only).
+//
+// REIN-CHANGE RENDERING RULE:
+//   Hard changes: "Change rein at [marker]" — no destination named; rider
+//     knows what rein follows from context. cmd.to is preserved on the
+//     command for future voice profiles that may want to speak it.
+//   Soft changes (loop): "Transition to [toRein] rein at [loopPhase]
+//     quarterline" — destination named because the bend-change is abstract.
+// ═══════════════════════════════════════════════════════════════
+
+function renderCommand(cmd, level) {
+  if (level >= 4)                             return null;
+  if (level > cmd.visibleUpTo)                return null;
+  if (cmd.phase === 'post-test' && level > 1) return null;
+
+  switch (cmd.action) {
+
+    case 'change-rein':
+      if (cmd.softness === 'soft')
+        return `Transition to ${cmd.to} rein at ${cmd.loopPhase} quarterline`;
+      return `Change rein at ${cmd.marker}`;
+
+    case 'gait-transition': {
+      const label = GAIT_LABEL[cmd.toGait] || cmd.toGait;
+      if (cmd.style === 'at') {
+        if (!cmd.marker) return null;
+        return `${label} at ${cmd.marker}`;
+      }
+      return `${label} between ${cmd.fromMarker} and ${cmd.toMarker}`;
+    }
+
+    case 'circle': {
+      const isHalf    = cmd.sweep && cmd.sweep < 360;
+      const isStretch = cmd.gait === 'stretch_trot';
+      const prefix    = isStretch ? 'Stretch trot — ' : '';
+      if (isHalf && cmd.endMarker)
+        return `${prefix}Half ${cmd.diameter}m circle ${cmd.hand} — ${cmd.marker} to ${cmd.endMarker}`;
+      return `${prefix}${cmd.diameter}m circle ${cmd.hand} at ${cmd.marker}`;
+    }
+
+    case 'shorten-reins':
+      return 'Shorten reins';
+
+    case 'halt':
+      return `Halt and salute at ${cmd.marker}`;
+
+    case 'preview': {
+      const coeff  = cmd.nextMvCoeff > 1 ? ` ×${cmd.nextMvCoeff}` : '';
+      const phrase = _renderNextCtx(cmd.nextCtx) || cmd.nextMvLabel;
+      return `Then${coeff}: ${phrase}`;
+    }
+
+    case 'coeff':
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+function _renderNextCtx(ctx) {
+  if (!ctx) return null;
+  switch (ctx.type) {
+    case 'rein-change':
+      // NOTE: the soft branch is currently unreachable — resolveNextMvCtx returns
+      // null for any movement with multiple rein-changes (including all loops, which
+      // always have two soft changes), so a soft ctx never reaches this renderer.
+      // Left in place for future voice profiles or single-soft-change edge cases.
+      if (ctx.softness === 'soft') return 'loop';
+      return `change rein at ${ctx.atMarker}`;
+    case 'gait-transition': {
+      const label = (GAIT_LABEL[ctx.toGait] || ctx.toGait).toLowerCase();
+      if (ctx.style === 'between')
+        return `${label} between ${ctx.fromMarker} and ${ctx.toMarker}`;
+      return `${label} at ${ctx.atMarker}`;
+    }
+    case 'circle-entry':
+      return `20m circle ${ctx.hand} at ${ctx.atMarker}`;
+    case 'halt':
+      return `halt and salute at ${ctx.atMarker || 'X'}`;
+    default:
+      return null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -732,6 +1017,10 @@ const PromptGenerator = {
   setMarkers,
   // Layer 3
   generateEvents,
+  // Layer 4
+  generateCommands,
+  renderCommand,
+  GAIT_LABEL,
   // Constants
   GSPEED_MPS,
 };
